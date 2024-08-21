@@ -1,6 +1,7 @@
 import paho.mqtt.client as mqtt
 import numpy as np
 from sklearn.linear_model import LinearRegression
+import matplotlib.pyplot as plt
 import json  # To parse JSON messages
 __version__ = "2.1.1.dev0"
 
@@ -54,11 +55,11 @@ class MyMQTTClient:
             raise ValueError(f"Unknown user action: {action}")
         
     def regression(self):
-        X = np.array(self.data)
-        y = np.array(self.targets)
+        X = np.array(self.data)  # Features: temperature and humidity
+        y = np.array(self.targets)  # Target: encoded user actions
         model = LinearRegression()
         model.fit(X, y)
-        print(f"Regression coefficients: {model.coef_}")
+        print(f"Regression coefficients (Temperature, Humidity): {model.coef_}")
         print(f"Intercept: {model.intercept_}")
 
 # Example usage
