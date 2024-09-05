@@ -13,6 +13,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.tree import plot_tree
 
+# necessary packages for gradient boosting model
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.metrics import accuracy_score, classification_report
+
 class MQTTException(Exception):
     pass
 
@@ -32,7 +36,7 @@ class MyMQTTClient:
         # model variables 
         self.reg_model = None
         self.tree_model = None
-        
+        self.gb_model = None
 
     def on_connect(self, client, userdata, flags, reason_code, properties):
         print(f"Connected with result code {reason_code}")
@@ -77,7 +81,8 @@ class MyMQTTClient:
             self.preprocessing(message)
 
         # self.regression()
-        self.decision_tree()
+        # self.decision_tree()
+        self.gradient_boosting()
 
         
     def regression(self):
@@ -142,8 +147,26 @@ class MyMQTTClient:
         plot_tree(self.tree_model, feature_names=['Humidity9am', 'Humidity3pm', 'Temp9am', 'Temp3pm'], class_names=['Decrease', 'Do Nothing', 'Increase'], filled=True)
         plt.show()
 
+    def gradient_boosting(self):
+        X = np.array(self.data)  # Features: temperature and humidity
+        y = np.array(self.target)  # Target: encoded user actions
 
+        # Split the data into training and testing sets
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
+        # Initialize and train the Gradient Boosting model
+        self.gb_model = GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42)
+        self.gb_model.fit(X_train, y_train)
+
+        print(f"Gradient Boosting model trained successfully.")
+        
+        # Make predictions
+        predictions = self.gb_model.predict(X_test)
+
+        # Evaluate the model
+        print(f"Accuracy: {accuracy_score(y_test, predictions)}")
+        print(classification_report(y_test, predictions))
+        return
 
 if __name__ == "__main__":
     # Example broker, you should replace this with the actual broker address you intend to use
