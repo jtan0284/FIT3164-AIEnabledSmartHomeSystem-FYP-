@@ -73,11 +73,38 @@ class MyMQTTClient:
     def regression(self):
         X = np.array(self.data)
         y = np.array(self.target)
-        model = LinearRegression()
-        model.fit(X, y)
-        print(f"Regression coefficients: {model.coef_}")
-        print(f"Intercept: {model.intercept_}")
+        self.reg_model = LinearRegression()
+        self.reg_model.fit(X, y)
+        print(f"Regression coefficients (Temperature, Humidity): {self.reg_model.coef_}")
+        print(f"Intercept: {self.reg_model.intercept_}")
+        predictions = self.reg_model.predict(X)
+        self.plot_regression_tree()
+        return
+    
+    def plot_regression_tree(self):
+        X = np.array(self.data)  # Features: temperature and humidity
+        y = np.array(self.target)  # Target: encoded user actions
+         # Plotting the results
+        plt.figure(figsize=(10, 6))
 
+        # Make predictions using the regression model
+        predictions = self.reg_model.predict(X)
+
+        # Plotting the results
+        plt.figure(figsize=(10, 6))
+
+        # Scatter plot of actual data
+        plt.scatter(X[:, 0], y, color='blue', label='Actual Data')
+
+        # Plot predicted values
+        plt.scatter(X[:, 0], predictions, color='red', label='Predicted Data')
+
+        plt.xlabel('Temperature')
+        plt.ylabel('User Action (Encoded)')
+        plt.title('Linear Regression: Temperature vs. User Action')
+        plt.legend()
+        plt.show()
+        return
 
 if __name__ == "__main__":
     # Example broker, you should replace this with the actual broker address you intend to use
