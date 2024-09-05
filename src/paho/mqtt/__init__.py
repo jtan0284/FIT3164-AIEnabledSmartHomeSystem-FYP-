@@ -133,7 +133,17 @@ class MyMQTTClient:
         # Evaluate the model
         print(f"Accuracy: {accuracy_score(y_test, predictions)}")
         print(classification_report(y_test, predictions))
+
+        self.plot_decision_tree()
         return 
+    
+    def plot_decision_tree(self):
+        plt.figure(figsize=(20, 10))  
+        plot_tree(self.tree_model, feature_names=['Humidity9am', 'Humidity3pm', 'Temp9am', 'Temp3pm'], class_names=['Decrease', 'Do Nothing', 'Increase'], filled=True)
+        plt.show()
+
+
+
 
 if __name__ == "__main__":
     # Example broker, you should replace this with the actual broker address you intend to use
