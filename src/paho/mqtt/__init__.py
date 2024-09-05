@@ -7,6 +7,11 @@ import json  # To parse JSON messages
 import pandas as pd  # To read the Excel file
 __version__ = "2.1.1.dev0"
 
+# necessary packages for decision tree
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.tree import plot_tree
 
 class MQTTException(Exception):
     pass
@@ -22,8 +27,12 @@ class MyMQTTClient:
         self.messages = []
         self.data = []
         self.target = []
-        self.reg_model = None
         self.dataframe = []
+        
+        # model variables 
+        self.reg_model = None
+        self.tree_model = None
+        
 
     def on_connect(self, client, userdata, flags, reason_code, properties):
         print(f"Connected with result code {reason_code}")
@@ -67,7 +76,8 @@ class MyMQTTClient:
             message = json.dumps([[row['Humidity9am'], row['Humidity3pm'], row['Temp9am'], row['Temp3pm'],row['UserAction']]])
             self.preprocessing(message)
 
-        self.regression()
+        # self.regression()
+        self.decision_tree()
 
         
     def regression(self):
@@ -105,6 +115,25 @@ class MyMQTTClient:
         plt.legend()
         plt.show()
         return
+    
+    def decision_tree(self):
+        X = np.array(self.data)  # Features: temperature and humidity
+        y = np.array(self.target)  # Target: encoded user actions
+        # Split the data into training and testing sets
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+        # Initialize and train the model
+        self.tree_model = DecisionTreeClassifier()
+        self.tree_model.fit(X_train, y_train)
+
+        print(f"Decision Tree model trained successfully.")
+        # Make predictions
+        predictions = self.tree_model.predict(X_test)
+
+        # Evaluate the model
+        print(f"Accuracy: {accuracy_score(y_test, predictions)}")
+        print(classification_report(y_test, predictions))
+        return 
 
 if __name__ == "__main__":
     # Example broker, you should replace this with the actual broker address you intend to use
