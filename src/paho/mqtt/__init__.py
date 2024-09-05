@@ -16,6 +16,11 @@ from sklearn.tree import plot_tree
 # necessary packages for gradient boosting model
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import roc_curve, auc
+
+# nexeassary packages for checking dataset imbalance
+import numpy as np
+from collections import Counter
 
 class MQTTException(Exception):
     pass
@@ -60,9 +65,9 @@ class MyMQTTClient:
             self.target.append(actions)  # User action is the target variable\
             self.dataframe.append([entry[0],entry[1],entry[2],entry[3],actions])
 
+
     def encode_user_action(self, action):
-        # Encode the user action as a numerical value
-        if action == "Increase":
+        if action == "Increase":  # Adjust this to match the exact label in your dataset
             return 1
         elif action == "Decrease":
             return -1
@@ -73,8 +78,10 @@ class MyMQTTClient:
         
     def simulate_from_csv(self, csv_file):
         df = pd.read_csv(csv_file)  # Read the Excel file into a DataFrame
-        df = df.dropna()
-    
+
+        # Drop rows with NA values in specific columns only
+        df = df.dropna(subset=['Humidity9am', 'Humidity3pm', 'Temp9am', 'Temp3pm'])
+
         for _, row in df.iterrows():
             # Convert the row to a JSON message format
             message = json.dumps([[row['Humidity9am'], row['Humidity3pm'], row['Temp9am'], row['Temp3pm'],row['UserAction']]])
@@ -166,7 +173,42 @@ class MyMQTTClient:
         # Evaluate the model
         print(f"Accuracy: {accuracy_score(y_test, predictions)}")
         print(classification_report(y_test, predictions))
+        self.plot_roc_curve()
         return
+
+    def plot_roc_curve(self):
+        # Ensure the model has been trained
+        if self.gb_model is None:
+            print("Model has not been trained yet.")
+            return
+
+        X = np.array(self.data)  # Features: temperature and humidity
+        y = np.array(self.target)  # Target: encoded user actions
+        
+        # Split the data into training and testing sets
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+        # Get the predicted probabilities
+        y_pred_prob = self.gb_model.predict_proba(X_test)[:, 1]
+
+        # Compute ROC curve and ROC area, specifying pos_label as -1
+        fpr, tpr, thresholds = roc_curve(y_test, y_pred_prob, pos_label=1)
+        roc_auc = auc(fpr, tpr)
+
+        # Plot the ROC curve
+        plt.figure(figsize=(10, 6))
+        plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
+        plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')  # Diagonal line for random performance
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('Receiver Operating Characteristic (ROC)')
+        plt.legend(loc="lower right")
+        plt.show()
+
+        return
+
 
 if __name__ == "__main__":
     # Example broker, you should replace this with the actual broker address you intend to use
@@ -175,7 +217,14 @@ if __name__ == "__main__":
 
     # Simulate data from an Excel file for testing
     mqtt_client.simulate_from_csv(r"C:\Users\ethan\OneDrive\Documents\VScode\archive\weatherAUS.csv")
-    
+    # Load the dataset
+    df = pd.read_csv(r"C:\Users\ethan\OneDrive\Documents\VScode\archive\weatherAUS.csv")
+
+    # # Check unique values in the UserAction column
+    # print(df['UserAction'].unique())
+
+    # # Check the count of each UserAction
+    # print(df['UserAction'].value_counts())
 
 # # Example usage
 # mqtt_client = MyMQTTClient(broker="mqtt.eclipseprojects.io")
