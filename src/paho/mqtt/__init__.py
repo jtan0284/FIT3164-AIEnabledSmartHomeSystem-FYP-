@@ -1,3 +1,4 @@
+import paho.mqtt.client as paho
 import paho.mqtt.client as mqtt
 import numpy as np
 from sklearn.linear_model import LinearRegression
@@ -29,10 +30,10 @@ import paho.mqtt.client as mqtt
 
 class MyMQTTClient:
     def __init__(self, broker, port=1883, keepalive=60):
-        self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-        self.client.on_connect = self.on_connect
-        self.client.on_message = self.on_message
-        self.client.connect(broker, port, keepalive)
+        # self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+        # self.client.on_connect = self.on_connect
+        # self.client.on_message = self.on_message
+        # self.client.connect(broker, port, keepalive)
         self.messages = []
         self.data = []
         self.target = []
@@ -43,9 +44,35 @@ class MyMQTTClient:
         self.tree_model = None
         self.gb_model = None
 
+        self.client = paho.Client()
+        self.client.on_connect = self.on_connect
+        self.client.on_message = self.on_message
+        self.client.connect(broker, 1883)
+        
+        self.on_subscribe()
+        self.client.on_message = self.on_message
+        self.client.subscribe('mds06_temperature/#', qos=0)
+
+    def on_subscribe(client, userdata, mid, reason_code_list, properties):
+        # Since we subscribed only for a single channel, reason_code_list contains
+        # a single entry
+        if reason_code_list[0].is_failure:
+            print(f"Broker rejected you subscription: {reason_code_list[0]}")
+        else:
+            print(f"Broker granted the following QoS: {reason_code_list[0].value}")
+
+    def on_unsubscribe(client, userdata, mid, reason_code_list, properties):
+        # Be careful, the reason_code_list is only present in MQTTv5.
+        # In MQTTv3 it will always be empty
+        if len(reason_code_list) == 0 or not reason_code_list[0].is_failure:
+            print("unsubscribe succeeded (if SUBACK is received in MQTTv3 it success)")
+        else:
+            print(f"Broker replied with failure: {reason_code_list[0]}")
+        client.disconnect()
+
     def on_connect(self, client, userdata, flags, reason_code, properties):
         print(f"Connected with result code {reason_code}")
-        client.subscribe("$SYS/#")
+        self.client.subscribe('mds06_temperature/#', qos=0)
 
     def on_message(self, client, userdata, msg):
         message = {"topic": msg.topic, "payload": msg.payload.decode()}
@@ -213,12 +240,13 @@ class MyMQTTClient:
 if __name__ == "__main__":
     # Example broker, you should replace this with the actual broker address you intend to use
     # mqtt_client = MyMQTTClient(broker="mqtt.eclipseprojects.io")
-    mqtt_client = MyMQTTClient(broker="broker.hivemq.com")
+    # mqtt_client = MyMQTTClient(broker="broker.hivemq.com")
+    mqtt_client = MyMQTTClient("broker.hivemq.com")
 
     # Simulate data from an Excel file for testing
-    mqtt_client.simulate_from_csv(r"C:\Users\ethan\OneDrive\Documents\VScode\archive\weatherAUS.csv")
-    # Load the dataset
-    df = pd.read_csv(r"C:\Users\ethan\OneDrive\Documents\VScode\archive\weatherAUS.csv")
+    # mqtt_client.simulate_from_csv(r"C:\Users\ethan\OneDrive\Documents\VScode\archive\weatherAUS.csv")
+    # # Load the dataset
+    # df = pd.read_csv(r"C:\Users\ethan\OneDrive\Documents\VScode\archive\weatherAUS.csv")
 
     # # Check unique values in the UserAction column
     # print(df['UserAction'].unique())
