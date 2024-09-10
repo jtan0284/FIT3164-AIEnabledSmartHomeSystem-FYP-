@@ -23,75 +23,61 @@ from sklearn.metrics import roc_curve, auc
 import numpy as np
 from collections import Counter
 
+# neceasary packages for date time
+import datetime 
+
 class MQTTException(Exception):
     pass
 
 import paho.mqtt.client as mqtt
 
-class MyMQTTClient:
-    def __init__(self, broker, port=1883, keepalive=60):
-        # self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-        # self.client.on_connect = self.on_connect
-        # self.client.on_message = self.on_message
-        # self.client.connect(broker, port, keepalive)
+class Model_training:
+    def __init__(self,payload, preference, insert_time):
         self.messages = []
         self.data = []
         self.target = []
         self.dataframe = []
+        self.preference = preference
+        self.payload = payload
+        self.insert_time = datetime.datetime.strptime(insert_time, "%d %H:%M:%S")  # Ensure start_time is a datetime object
+
+        self.preprocessing(self.payload)
         
         # model variables 
         self.reg_model = None
         self.tree_model = None
         self.gb_model = None
 
-        self.client = paho.Client()
-        self.client.on_connect = self.on_connect
-        self.client.on_message = self.on_message
-        self.client.connect(broker, 1883)
-        
-        self.on_subscribe()
-        self.client.on_message = self.on_message
-        self.client.subscribe('mds06_temperature/#', qos=0)
-
-    def on_subscribe(client, userdata, mid, reason_code_list, properties):
-        # Since we subscribed only for a single channel, reason_code_list contains
-        # a single entry
-        if reason_code_list[0].is_failure:
-            print(f"Broker rejected you subscription: {reason_code_list[0]}")
-        else:
-            print(f"Broker granted the following QoS: {reason_code_list[0].value}")
-
-    def on_unsubscribe(client, userdata, mid, reason_code_list, properties):
-        # Be careful, the reason_code_list is only present in MQTTv5.
-        # In MQTTv3 it will always be empty
-        if len(reason_code_list) == 0 or not reason_code_list[0].is_failure:
-            print("unsubscribe succeeded (if SUBACK is received in MQTTv3 it success)")
-        else:
-            print(f"Broker replied with failure: {reason_code_list[0]}")
-        client.disconnect()
-
-    def on_connect(self, client, userdata, flags, reason_code, properties):
-        print(f"Connected with result code {reason_code}")
-        self.client.subscribe('mds06_temperature/#', qos=0)
-
-    def on_message(self, client, userdata, msg):
-        message = {"topic": msg.topic, "payload": msg.payload.decode()}
-        self.messages.append(message)  # Store the message
-        print(message)
-        self.preprocessing(message['payload'])
-
-    def start(self):
-        self.client.loop_forever()
-
     def preprocessing(self, payload):
-        data_array = json.loads(payload)  # Parse the JSON string into a Python object
 
-        for entry in data_array:
-            self.data.append([entry[0],entry[1],entry[2],entry[3]])  # Treat temperature as the feature
-            actions = self.encode_user_action(entry[4])
-            self.target.append(actions)  # User action is the target variable\
-            self.dataframe.append([entry[0],entry[1],entry[2],entry[3],actions])
+        current_time = datetime.datetime.now().strftime("%d %H:%M:%S")  # Get current time
+        # Extract numeric values and append to self.data
+        for temp in payload:
+            number_value = float(temp.strip("b'"))  # Remove 'b' and quotes, then convert to float
+            
+                # Check if the current time matches the insert_time condition
+            if current_time == self.insert_time:
+                # Insert user_preference at the specific time
+                self.data.append([current_time, number_value, self.preference])
+            else:
+                # Insert without user_preference (could use None or some other placeholder)
+                self.data.append([current_time, number_value, None])
+            current_time += datetime.timedelta(minutes=1)
 
+        # Convert the data into a pandas DataFrame
+        self.dataframe = pd.DataFrame(self.data, columns=['Timestamp', 'Temperature', 'User_preferencce'])
+        print(self.dataframe)
+        
+    def temperature_control(self):
+        for rows in self.dataframe:
+            while[rows][1] != self.preference:
+                if [rows][i] > self.preference:
+                    action = "decrease"
+                elif [rows][i] < self.preference:
+                    action = "increase"
+                else:
+                    action = "do nothing"
+                print(action)
 
     def encode_user_action(self, action):
         if action == "Increase":  # Adjust this to match the exact label in your dataset
@@ -241,12 +227,25 @@ if __name__ == "__main__":
     # Example broker, you should replace this with the actual broker address you intend to use
     # mqtt_client = MyMQTTClient(broker="mqtt.eclipseprojects.io")
     # mqtt_client = MyMQTTClient(broker="broker.hivemq.com")
-    mqtt_client = MyMQTTClient("broker.hivemq.com")
+    # mqtt_client = MyMQTTClient("broker.hivemq.com")
 
     # Simulate data from an Excel file for testing
     # mqtt_client.simulate_from_csv(r"C:\Users\ethan\OneDrive\Documents\VScode\archive\weatherAUS.csv")
     # # Load the dataset
     # df = pd.read_csv(r"C:\Users\ethan\OneDrive\Documents\VScode\archive\weatherAUS.csv")
+    temperature_data = [
+    "b'21.8'", "b'28.2'", "b'33.1'", "b'25.9'", "b'23.4'", 
+    "b'30.0'", "b'32.5'", "b'26.7'", "b'24.8'", "b'27.1'", 
+    "b'29.6'", "b'22.0'", "b'31.9'", "b'34.7'", "b'20.3'", 
+    "b'28.4'", "b'21.2'", "b'30.8'", "b'26.5'", "b'22.7'", 
+    "b'27.9'", "b'23.1'", "b'25.4'", "b'32.3'", "b'21.6'", 
+    "b'33.5'", "b'29.2'", "b'24.6'", "b'34.1'", "b'22.5'"
+    ]
+
+    insert_time = datetime.datetime.now().strftime("%d %H:%M:%S")
+    preference = 28.9
+
+    model_test = Model_training(temperature_data, preference, insert_time)
 
     # # Check unique values in the UserAction column
     # print(df['UserAction'].unique())
