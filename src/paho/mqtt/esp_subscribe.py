@@ -3,6 +3,9 @@ import paho.mqtt.client as paho
 # importing model class from __init__ file 
 from mqtt import Model_training
 
+# neceasary packages for date time
+import datetime 
+
 class MQTTClient:
     def __init__(self, broker, port, topic, ai_model):
         self.broker = broker
@@ -40,9 +43,9 @@ class MQTTClient:
         """Callback function to handle incoming MQTT messages."""
         data = msg.payload.decode('utf-8')
         print(f"Received message: {data} on topic {msg.topic} with QoS {msg.qos}")
-        
+        insert_time = datetime.datetime.now().strftime("%H:%M:%S")
         # Process the data using the AIModel
-        result = self.ai_model.process_live_data(data)
+        result = self.ai_model.preprocessing(payload=data, insert_time= insert_time)
         
         # Print the result of the AI model's processing
         print(f"AI Model processed result: {result}")

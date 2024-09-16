@@ -20,12 +20,17 @@ from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import roc_curve, auc
 
-# nexeassary packages for checking dataset imbalance
+# neceassary packages for checking dataset imbalance
 import numpy as np
 from collections import Counter
 
 # neceasary packages for date time
 import datetime 
+
+# neceassary packages for intergration with HTML
+from flask import Flask, request, render_template
+
+app = Flask(__name__)
 
 class MQTTException(Exception):
     pass
@@ -33,55 +38,66 @@ class MQTTException(Exception):
 import paho.mqtt.client as mqtt
 
 class Model_training:
-    def __init__(self,payload, preference, insert_time):
+    def __init__(self, preference):
         self.messages = []
         self.data = []
         self.target = []
         self.dataframe = []
         self.preference = preference
-        self.payload = payload
-        self.insert_time = insert_time
+        self.payload = None
+        self.insert_time = None
 
-        self.preprocessing(self.payload)
-        # self.regression()
-        self.tests()
-        print(self.dataframe)
-        self.gradient_boosting()
+        # # self.regression()
+        # self.tests()
+        # print(self.dataframe)
+        # self.gradient_boosting()
         
         # model variables 
         self.reg_model = None
         self.tree_model = None
         self.gb_model = None
 
-    def preprocessing(self, payload):
+    @app.route('/')
+    def index():
+        return render_template('index.html')
+
+    @app.route('/set_temperature', methods=['POST'])
+    def set_temperature(self):
+        temperature = float(request.form['temperature'])
+        user_preference = 24.0  # You can set this based on user input
+        
+        action = self.gb_model.temperature_control(temperature)
+        
+        return f"<h2>Action: {action} the temperature!</h2>"
+
+    def preprocessing(self, payload, insert_time,window_size=100):
 
         current_time = datetime.datetime.now().strftime("%H:%M:%S")  # Get current time
 
         # Convert both current_time and self.insert_time to datetime objects
         current_time = datetime.datetime.strptime(current_time, "%H:%M:%S")
-        insert_time = datetime.datetime.strptime(self.insert_time, "%H:%M:%S")
+        insert_time = datetime.datetime.strptime(insert_time, "%H:%M:%S")
 
         # Extract numeric values and append to self.data
-        for temp in payload:
-            temperature = float(temp.strip("b'"))  # Remove 'b' and quotes, then convert to float
+        temperature = float(payload.strip("b'"))  # Remove 'b' and quotes, then convert to float
+        action = self.temperature_control(temperature)
 
-                # Check if the current time matches the insert_time condition
-            if current_time.minute == insert_time.minute:
-                # Insert user_preference at the specific time
-                time_string = current_time.strftime("%H:%M:%S")  # Only keep the time part
-                action = self.temperature_control(temperature)
-                self.data.append([time_string, temperature, self.preference, action])
-            else:
-                time_string = current_time.strftime("%H:%M:%S")  # Only keep the time part
-                # Insert without user_preference (could use None or some other placeholder)
-                action = self.temperature_control(temperature)
-                self.data.append([time_string, temperature, None, action])
+        new_row = [current_time, temperature, self.preference if current_time == insert_time else None, action]
 
-            # add an interval of one minute 
-            current_time += datetime.timedelta(minutes=1)  
+        # Add the new row to the data
+        self.data.append(new_row)
+      
+         # Keep only the most recent 'window_size' data points (sliding window approach)
+        if len(self.data) > window_size:
+            self.data = self.data[-window_size:]  # Keep only the last 'window_size' entries
 
         # Convert the data into a pandas DataFrame
         self.dataframe = pd.DataFrame(self.data, columns=['Timestamp', 'Temperature', 'User_preference', 'action'])
+
+        print("Updated DataFrame (Sliding Window):\n", self.dataframe.tail())  # Optional log
+
+        if len(self.dataframe) > 0:
+            self.gradient_boosting()
         
     def tests(self):
         # Define the updates as (row_index, value) pairs
@@ -292,7 +308,7 @@ if __name__ == "__main__":
     # Prompt the user to enter their temperature preference
     preference = float(input("Please enter your temperature preference: "))
 
-    model_test = Model_training(temperature_data, preference, insert_time)
+    model_test = Model_training(preference)
 
     # # Check unique values in the UserAction column
     # print(df['UserAction'].unique())22
