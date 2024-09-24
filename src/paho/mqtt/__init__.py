@@ -30,6 +30,9 @@ import datetime
 # neceassary packages for intergration with HTML
 from flask import Flask, request, render_template
 
+# neceasary packages for model buidling for missing values
+from sklearn.impute import KNNImputer
+
 app = Flask(__name__)
 
 class MQTTException(Exception):
@@ -38,14 +41,18 @@ class MQTTException(Exception):
 import paho.mqtt.client as mqtt
 
 class Model_training:
-    def __init__(self, preference):
+    def __init__(self):
         self.messages = []
         self.data = []
         self.target = []
-        self.dataframe = []
-        self.preference = preference
-        self.payload = None
-        self.insert_time = None
+        # self.preference = 22.5
+        # Initialize an array of 24 lists (one for each hour of the day)
+        self.hourly_data = [[] for _ in range(24)]
+        self.current_hour = datetime.datetime.now().hour  # Get the current hour (0-23)
+
+        # self.temperature = temperature
+        # self.humidity = humidity
+        # self.insert_time = insert_time
 
         # # self.regression()
         # self.tests()
@@ -70,53 +77,36 @@ class Model_training:
         
         return f"<h2>Action: {action} the temperature!</h2>"
 
-    def preprocessing(self, payload, insert_time,window_size=100):
+    def preprocessing(self, temperature, humidity, insert_time,pref_temperature, pref_humidity):
+        """
+        Process incoming temperature and humidity data, store it in the correct hour array, 
+        and trigger training once the hour changes.
+        """
+        current_time = datetime.datetime.now().strftime("%H:%M:%S")
+        current_hour = datetime.datetime.now().hour
 
-        current_time = datetime.datetime.now().strftime("%H:%M:%S")  # Get current time
+        if pref_temperature is None:
+            pref_temperature = np.nan
 
-        # Convert both current_time and self.insert_time to datetime objects
-        current_time = datetime.datetime.strptime(current_time, "%H:%M:%S")
-        insert_time = datetime.datetime.strptime(insert_time, "%H:%M:%S")
+        if pref_humidity is None:
+            pref_humidity = np.nan
 
-        # Extract numeric values and append to self.data
-        temperature = float(payload.strip("b'"))  # Remove 'b' and quotes, then convert to float
-        action = self.temperature_control(temperature)
-
-        new_row = [current_time, temperature, self.preference if current_time == insert_time else None, action]
-
-        # Add the new row to the data
-        self.data.append(new_row)
-      
-         # Keep only the most recent 'window_size' data points (sliding window approach)
-        if len(self.data) > window_size:
-            self.data = self.data[-window_size:]  # Keep only the last 'window_size' entries
-
-        # Convert the data into a pandas DataFrame
-        self.dataframe = pd.DataFrame(self.data, columns=['Timestamp', 'Temperature', 'User_preference', 'action'])
-
-        print("Updated DataFrame (Sliding Window):\n", self.dataframe.tail())  # Optional log
-
-        if len(self.dataframe) > 0:
-            self.gradient_boosting()
         
-    def tests(self):
-        # Define the updates as (row_index, value) pairs
-        updates = [
-            (5, 22.1),
-            (6, 24.6),
-            (7, 26.9),
-            (8, 23.0),
-            (15, 27.2)
-        ]
+        # Store the data entry (temperature, humidity, and timestamp)
+        self.data.append([current_time, temperature, humidity,pref_temperature ,pref_humidity])
+        
+        # If the hour has changed, trigger model training and reset data
+        if current_hour != self.current_hour:
+             # Convert data to DataFrame for model training
+            df = pd.DataFrame(self.data, columns=['Timestamp', 'Temperature', 'Humidity','Preferred Temperature','Preferred Humidty'])
+            self.gradient_boosting(df)
+            self.data = []  # Reset the data for the new hour
+            self.current_hour = current_hour
+        
+        # For real-time predictions
+        action = self.temperature_control(temperature)
+        print(f"Action based on temperature: {action}")
 
-        # Get the column index for 'User_preference'
-        if 'User_preference' in self.dataframe.columns:
-            col_index = self.dataframe.columns.get_loc('User_preference')
-            
-            for row, value in updates:
-                if row < len(self.dataframe):
-                    self.dataframe.iloc[row, col_index] = value
-                    print(f"Assigned {value} to row {row} in 'User_preference'")
 
     def temperature_control(self, temperature):
         if temperature > self.preference:
@@ -127,15 +117,64 @@ class Model_training:
             action = "do nothing"
         return(action)
 
-    def encode_user_action(self, action):
-        if action == "Increase":  # Adjust this to match the exact label in your dataset
-            return 1
-        elif action == "Decrease":
-            return -1
-        elif action == "Do Nothing":
-            return 0
-        else:
-            raise ValueError(f"Unknown user action: {action}")
+    def gradient_boosting(self, data):
+        data = self.handle_missing(data)        
+
+        X = data[['Temperature','Humidity']]  
+        y_temp = data['Preferred_Temperature']  # Target for temperature prediction
+        y_humid = data['Preferred_Humidity'] # Target for humidity prediction
+
+        # Convert to numpy arrays if necessary
+        X = X.to_numpy()  # Convert X to NumPy array
+        y_temp = y_temp.to_numpy()  # Convert y_temp to NumPy array (encoded user preferences)
+
+        # Split the data into training and testing sets (80% training, 20% testing)
+        X_train, X_test, y_train_temp, y_test_temp = train_test_split(X, y_temp, test_size=0.2, random_state=42)
+
+        # Initialize and train the Gradient Boosting Regressor for temperature prediction
+        self.gb_model_temp = GradientBoostingRegressor(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42)
+        self.gb_model_temp.fit(X_train, y_train_temp)
+
+        print(f"Gradient Boosting model trained successfully for temperature prediction.")
+                
+        # Make temperature predictions on the test set
+        predictions_temp = self.gb_model_temp.predict(X_test)
+
+        # Evaluate the model using Mean Squared Error (MSE) for temperature prediction
+        mse_temp = mean_squared_error(y_test_temp, predictions_temp)
+        print(f"Mean Squared Error (Temperature): {mse_temp}")
+
+        # Gradient boosting for humidity data 
+        y_humid = y_humid.to_numpy()
+        X_train_hum, X_test_hum, y_train_hum, y_test_hum = train_test_split(X, y_humid, test_size=0.2, random_state=42)
+
+        self.gb_model_humid = GradientBoostingRegressor(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42)
+        self.gb_model_humid.fit(X_train_hum, y_train_hum)
+        print(f"Gradient Boosting model trained successfully for humidity prediction.")
+
+        # Make humidity predictions
+        predictions_humid = self.gb_model_humid.predict(X_test_hum)
+        mse_humid = mean_squared_error(y_test_hum, predictions_humid)
+        print(f"Mean Squared Error (Humidity): {mse_humid}")
+
+        # Plot Predicted vs Actual values for temperature
+        self.plot_predicted_vs_actual(y_test_temp, predictions_temp, "Temperature")
+
+        return
+
+    def plot_predicted_vs_actual(self, y_true, y_pred, label):
+        """
+        Plot the predicted vs actual user preferences.
+        """
+        plt.figure(figsize=(8, 6))
+        plt.scatter(y_true, y_pred, color='blue', label=f'Predicted vs Actual {label}')
+        plt.plot([y_true.min(), y_true.max()], [y_true.min(), y_true.max()], color='red', linestyle='--', lw=2, label='Ideal Line')
+        
+        plt.xlabel(f'Actual {label}')
+        plt.ylabel(f'Predicted {label}')
+        plt.title(f'Predicted vs Actual {label}')
+        plt.legend(loc="upper left")
+        plt.show()
 
     def regression(self):
         X = self.dataframe[['Temperature']]
@@ -225,72 +264,6 @@ class Model_training:
         plt.figure(figsize=(20, 10))  
         plot_tree(self.tree_model, feature_names=['Humidity9am', 'Humidity3pm', 'Temp9am', 'Temp3pm'], class_names=['Decrease', 'Do Nothing', 'Increase'], filled=True)
         plt.show()
-
-    def gradient_boosting(self):
-        # Features: Using 'Temperature' (and optionally 'Humidity' if available)
-        # Adjust the feature selection to match your actual DataFrame structure
-        X = self.dataframe[['Temperature']]  # Add 'Humidity' if you want to use it
-        y = self.dataframe['User_preference']  # Target: encoded user actions or preferences
-
-        # Remove rows where User_preference is NaN
-        X = X[~y.isna()]
-        y = y.dropna()
-
-        # Convert to numpy arrays if necessary
-        X = X.to_numpy()  # Convert X to NumPy array
-        y = y.to_numpy()  # Convert y to NumPy array (encoded user actions)
-
-        # Split the data into training and testing sets
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-        # Initialize and train the Gradient Boosting model
-        self.gb_model = GradientBoostingRegressor(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42)
-        self.gb_model.fit(X_train, y_train)
-
-        print(f"Gradient Boosting model trained successfully.")
-            
-        # Make predictions
-        predictions = self.gb_model.predict(X_test)
-
-        # Evaluate the model
-        mse = mean_squared_error(y_test, predictions)
-        print(f"Mean Squared Error: {mse}")
-
-        # Plot ROC curve
-        self.plot_roc_curve()
-
-        return
-
-    def plot_roc_curve(self):
-        X = self.dataframe[['Temperature']]  # Features: temperature (add others if needed)
-        y = self.dataframe['User_preference']  # Target: continuous user preferences
-        
-        # Remove NaN values to match training data
-        X = X[~y.isna()]
-        y = y.dropna()
-
-        # Convert to numpy arrays if necessary
-        X = X.to_numpy()
-        y = y.to_numpy()
-
-        # Split the data into training and testing sets
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-        # Get the predicted values for the test set
-        y_pred = self.gb_model.predict(X_test)
-
-        # Plot actual vs. predicted values
-        plt.figure(figsize=(10, 6))
-        plt.scatter(y_test, y_pred, color='blue', label='Predicted vs Actual')
-        plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], color='red', lw=2, linestyle='--', label='Ideal Line')
-        
-        plt.xlabel('Actual User Preferences')
-        plt.ylabel('Predicted User Preferences')
-        plt.title('Predicted vs Actual User Preferences')
-        plt.legend(loc="upper left")
-        plt.show()
-
-        return
 
 
 if __name__ == "__main__":
