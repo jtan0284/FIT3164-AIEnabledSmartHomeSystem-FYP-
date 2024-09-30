@@ -1,7 +1,14 @@
 import paho.mqtt.client as paho
 import threading
-from . import Model_training  # Import your Model_training class from __init__.py
 import datetime
+
+import sys
+import os
+
+# Add the directory containing your 'mqtt' folder to the system path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from mqtt import Model_training  # Now it should refer to the local mqtt module
 
 # Global model instance
 model = None
@@ -35,7 +42,7 @@ def on_message(client, userdata, msg):
         # Once both temperature and humidity are available, process them
         if temperature is not None and humidity is not None:
             insert_time = datetime.datetime.now().strftime("%H:%M:%S")
-            model.preprocessing(temperature, humidity, insert_time)  # Pass both values to preprocessing
+            model.preprocessing(temperature, humidity, insert_time,None, None)  # Pass both values to preprocessing
             
             # Reset values after processing
             temperature = None
@@ -53,8 +60,8 @@ def start_mqtt():
     client.on_message = on_message
 
     client.connect("broker.hivemq.com", 1883)
-    client.subscribe("md506_temperature/#", qos=0)
-    client.subscribe("md506_humidity/#", qos=0)
+    client.subscribe("mds06_temperature/#", qos=0)
+    client.subscribe("mds06_humidity/#", qos=0)
     client.loop_forever()
 
 if __name__ == "__main__":

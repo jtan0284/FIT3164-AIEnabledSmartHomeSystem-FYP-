@@ -45,7 +45,7 @@ class Model_training:
         self.messages = []
         self.data = []
         self.target = []
-        # self.preference = 22.5
+        self.preference = 22.5
         # Initialize an array of 24 lists (one for each hour of the day)
         self.hourly_data = [[] for _ in range(24)]
         self.current_hour = datetime.datetime.now().hour  # Get the current hour (0-23)
@@ -267,15 +267,6 @@ class Model_training:
 
 
 if __name__ == "__main__":
-    temperature_data = [
-    "b'21.8'", "b'28.2'", "b'33.1'", "b'25.9'", "b'23.4'", 
-    "b'30.0'", "b'32.5'", "b'26.7'", "b'24.8'", "b'27.1'", 
-    "b'29.6'", "b'22.0'", "b'31.9'", "b'34.7'", "b'20.3'", 
-    "b'28.4'", "b'21.2'", "b'30.8'", "b'26.5'", "b'22.7'", 
-    "b'27.9'", "b'23.1'", "b'25.4'", "b'32.3'", "b'21.6'", 
-    "b'33.5'", "b'29.2'", "b'24.6'", "b'34.1'", "b'22.5'"
-    ]
-
     insert_time = datetime.datetime.now().strftime("%H:%M:%S")
     
     # Prompt the user to enter their temperature preference
@@ -289,7 +280,6 @@ if __name__ == "__main__":
 
     # # Check the count of each UserAction
     # print(df['UserAction'].value_counts())
-
-# # Example usage
-# mqtt_client = MyMQTTClient(broker="mqtt.eclipseprojects.io")
-# mqtt_client.start()
+    # # Example usage
+    # mqtt_client = MyMQTTClient(broker="mqtt.eclipseprojects.io")
+    # mqtt_client.start()
