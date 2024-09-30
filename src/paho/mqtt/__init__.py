@@ -22,21 +22,24 @@ from sklearn.metrics import roc_curve, auc
 
 # neceassary packages for checking dataset imbalance
 import numpy as np
-from collections import Counter
 
 # neceasary packages for date time
 import datetime 
 
 # neceassary packages for intergration with HTML
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, jsonify
+import threading
+from flask_cors import CORS
+
 
 # neceasary packages for model buidling for missing values
 from sklearn.impute import KNNImputer
 
 app = Flask(__name__)
+CORS(app)
 
-class MQTTException(Exception):
-    pass
+temperature = None
+humidity = None
 
 import paho.mqtt.client as mqtt
 
@@ -45,7 +48,7 @@ class Model_training:
         self.messages = []
         self.data = []
         self.target = []
-        self.preference = 22.5
+        self.preference = None
         # Initialize an array of 24 lists (one for each hour of the day)
         self.hourly_data = [[] for _ in range(24)]
         self.current_hour = datetime.datetime.now().hour  # Get the current hour (0-23)
@@ -63,19 +66,6 @@ class Model_training:
         self.reg_model = None
         self.tree_model = None
         self.gb_model = None
-
-    @app.route('/')
-    def index():
-        return render_template('index.html')
-
-    @app.route('/set_temperature', methods=['POST'])
-    def set_temperature(self):
-        temperature = float(request.form['temperature'])
-        user_preference = 24.0  # You can set this based on user input
-        
-        action = self.gb_model.temperature_control(temperature)
-        
-        return f"<h2>Action: {action} the temperature!</h2>"
 
     def preprocessing(self, temperature, humidity, insert_time,pref_temperature, pref_humidity):
         """
@@ -102,11 +92,13 @@ class Model_training:
             self.gradient_boosting(df)
             self.data = []  # Reset the data for the new hour
             self.current_hour = current_hour
-        
-        # For real-time predictions
-        action = self.temperature_control(temperature)
-        print(f"Action based on temperature: {action}")
 
+    def set_user_preference(self, preferred_temperature):
+        """
+        This method updates the user's preferred temperature.
+        """
+        self.preference = preferred_temperature
+        print(f"User preference updated to: {self.preference}")
 
     def temperature_control(self, temperature):
         if temperature > self.preference:
@@ -265,21 +257,92 @@ class Model_training:
         plot_tree(self.tree_model, feature_names=['Humidity9am', 'Humidity3pm', 'Temp9am', 'Temp3pm'], class_names=['Decrease', 'Do Nothing', 'Increase'], filled=True)
         plt.show()
 
+# Initialize the model
+model = Model_training()
 
+# Flask Routes
+@app.route('/')
+def index():
+    return render_template('website.html')
+
+@app.route('/set_temperature', methods=['POST'])
+def set_temperature():
+    global model
+    global temperature
+    preferred_temperature = float(request.form['temperature'])  # Get temperature input from form
+    model.set_user_preference(preferred_temperature)
+    action =model.temperature_control(temperature)
+    # Return the action as a response to be displayed on the front end
+    return jsonify({'action': action})
+
+@app.route('/live_data')
+def live_data():
+    global temperature, humidity
+    data = {
+        'time': datetime.datetime.now().strftime('%H:%M:%S'),
+        'temperature': temperature,
+        'humidity': humidity
+    }
+    return jsonify(data)
+
+@app.route('/subscription_status')
+def subscription_status():
+    subscribed = True  # Example logic
+    return jsonify({'subscribed': subscribed})
+
+
+# MQTT Callback functions
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        print("Connected successfully to MQTT broker")
+    else:
+        print(f"Failed to connect, return code {rc}")
+
+def on_message(client, userdata, msg):
+    global temperature, humidity
+    try:
+        # Determine if the message is for temperature or humidity based on the topic
+        if "temperature" in msg.topic:
+            temperature_data = msg.payload.decode("utf-8").strip('b').strip("'")
+            temperature = float(temperature_data)
+            print(f"Received temperature: {temperature}")
+
+        elif "humidity" in msg.topic:
+            humidity_data = msg.payload.decode("utf-8").strip('b').strip("'")
+            humidity = float(humidity_data)
+            print(f"Received humidity: {humidity}")
+
+        # Once both temperature and humidity are available, process them
+        if temperature is not None and humidity is not None:
+            insert_time = datetime.datetime.now().strftime("%H:%M:%S")
+            model.preprocessing(temperature, humidity, insert_time,None, None)  # Pass both values to preprocessing
+            
+            # # Reset values after processing
+            # temperature = None
+            # humidity = None
+
+    except ValueError as e:
+        print(f"Error processing the message: {e}")
+
+# Function to run the MQTT client in a separate thread
+def start_mqtt():
+    client = mqtt.Client()
+
+    client.on_connect = on_connect
+    client.on_message = on_message
+
+    client.connect("broker.hivemq.com", 1883)
+    client.subscribe("mds06_temperature/#")
+    client.subscribe("mds06_humidity/#")
+
+    client.loop_forever()
+
+# Run Flask and MQTT in parallel
 if __name__ == "__main__":
-    insert_time = datetime.datetime.now().strftime("%H:%M:%S")
-    
-    # Prompt the user to enter their temperature preference
-    preference = float(input("Please enter your temperature preference: "))
+    model = Model_training()
+    # Start MQTT in a separate thread
+    mqtt_thread = threading.Thread(target=start_mqtt)
+    mqtt_thread.start()
 
-    model_test = Model_training(preference)
-
-    # # Check unique values in the UserAction column
-    # print(df['UserAction'].unique())22
-
-
-    # # Check the count of each UserAction
-    # print(df['UserAction'].value_counts())
-    # # Example usage
-    # mqtt_client = MyMQTTClient(broker="mqtt.eclipseprojects.io")
-    # mqtt_client.start()
+    # Run the Flask app in the main thread
+    app.run(debug=True, use_reloader=False, port=5000)  # Use reloader=False to prevent double threading

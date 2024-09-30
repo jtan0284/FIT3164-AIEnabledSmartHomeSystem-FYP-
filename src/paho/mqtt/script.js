@@ -60,49 +60,60 @@ var humidityChart = new Chart(humidityCtx, {
     }
 });
 
-// Fetch temperature data from the Flask API and update the temperature chart
-function fetchTemperatureData() {
-    fetch('http://127.0.0.1:5000/temperature')
+var preferredTemperature = null; // Global variable to store the preferred temperature
+
+document.querySelector('form').addEventListener('submit', function(event) {
+    event.preventDefault();  // Prevent the form from refreshing the page
+    preferredTemperature = parseFloat(document.getElementById('temperature').value);  // Store the preferred temperature
+});
+
+function fetchLiveData() {
+    fetch('http://127.0.0.1:5000/live_data')
     .then(response => response.json())
     .then(data => {
-        var timestamp = new Date();  // Current timestamp for x-axis
-        data.forEach(newTemp => {
-            // Update chart data
-            temperatureChart.data.labels.push(timestamp);
-            temperatureChart.data.datasets[0].data.push(newTemp);
-            // Limit the chart to the latest 200 data points
-            if (temperatureChart.data.labels.length > 200) {
-                temperatureChart.data.labels.shift();
-                temperatureChart.data.datasets[0].data.shift();
+        var timestamp = new Date();  // Get the current timestamp
+
+        // Update the temperature chart
+        temperatureChart.data.labels.push(timestamp);
+        temperatureChart.data.datasets[0].data.push(data.temperature);
+
+        // Update the humidity chart
+        humidityChart.data.labels.push(timestamp);
+        humidityChart.data.datasets[0].data.push(data.humidity);
+
+        // Limit the chart data to the latest 100 data points
+        if (temperatureChart.data.labels.length > 100) {
+            temperatureChart.data.labels.shift();
+            temperatureChart.data.datasets[0].data.shift();
+        }
+        if (humidityChart.data.labels.length > 100) {
+            humidityChart.data.labels.shift();
+            humidityChart.data.datasets[0].data.shift();
+        }
+
+        // Update the charts
+        temperatureChart.update();
+        humidityChart.update();
+
+        // Compare live temperature with preferred temperature and update action
+        if (preferredTemperature !== null) {
+            var actionResult = document.getElementById('action-result');
+            if (data.temperature > preferredTemperature) {
+                actionResult.innerHTML = "Action: decrease";
+                actionResult.style.color = "red";
+            } else if (data.temperature < preferredTemperature) {
+                actionResult.innerHTML = "Action: increase";
+                actionResult.style.color = "green";
+            } else {
+                actionResult.innerHTML = "Action: do nothing";
+                actionResult.style.color = "gray";
             }
-        });
-        temperatureChart.update();  // Re-draw the chart
+        }
     })
-    .catch(error => console.log("Error fetching temperature data:", error));
+    .catch(error => console.log("Error fetching live data:", error));
 }
 
-// Fetch humidity data from the Flask API and update the humidity chart
-function fetchHumidityData() {
-    fetch('http://127.0.0.1:5000/humidity')
-    .then(response => response.json())
-    .then(data => {
-        var timestamp = new Date();  // Current timestamp for x-axis
-        data.forEach(newHum => {
-            // Update chart dataa
-            humidityChart.data.labels.push(timestamp);
-            humidityChart.data.datasets[0].data.push(newHum);
-            // Limit the chart to the latest 200 data points
-            if (humidityChart.data.labels.length > 200) {
-                humidityChart.data.labels.shift();
-                humidityChart.data.datasets[0].data.shift();
-            }
-        });
-        humidityChart.update();  // Re-draw the chart
-    })
-    .catch(error => console.log("Error fetching humidity data:", error));
-}
-
-// Function to fetch subscription status
+// Fetch subscription status from Flask and update the subscription status element
 function fetchSubscriptionStatus() {
     fetch('http://127.0.0.1:5000/subscription_status')
     .then(response => response.json())
@@ -119,10 +130,40 @@ function fetchSubscriptionStatus() {
     .catch(error => console.log("Error fetching subscription status:", error));
 }
 
-// Fetch subscription status every 3 seconds
-setInterval(fetchSubscriptionStatus, 3000);
+document.querySelector('form').addEventListener('submit', function(event) {
+    event.preventDefault();  // Prevent the form from refreshing the page
+
+    // Get the temperature value from the input field
+    var temperature = document.getElementById('temperature').value;
+
+    // Prepare form data to send
+    var formData = new FormData();
+    formData.append('temperature', temperature);
+
+    // Send the POST request to Flask to set the temperature
+    fetch('http://127.0.0.1:5000/set_temperature', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Update the action result in the action container
+        var actionResult = document.getElementById('action-result');
+        actionResult.innerHTML = "Action: " + data.action;
+
+        // Optionally, change the style based on the action
+        if (data.action === "increase") {
+            actionResult.style.color = "green";
+        } else if (data.action === "decrease") {
+            actionResult.style.color = "red";
+        } else {
+            actionResult.style.color = "gray";
+        }
+    })
+    .catch(error => console.log("Error submitting form:", error));
+});
 
 
-// Fetch temperature and humidity data every second
-setInterval(fetchTemperatureData, 1000);
-setInterval(fetchHumidityData, 1000);
+// Set intervals to regularly fetch live data and subscription status
+setInterval(fetchLiveData, 1000);  // Fetch live data every second
+setInterval(fetchSubscriptionStatus, 5000);  // Fetch subscription status every 5 seconds

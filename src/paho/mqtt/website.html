@@ -10,43 +10,57 @@
 <body>
     <!-- Flex container for the form and charts -->
     <div class="flex-container">
-        <!-- Middle container with the form -->
-        <div class="container">
-            <h1>AI-Enabled Smart Home System</h1>
-            <form action="/set_temperature" method="post">
-                <label for="temperature">Enter your preferred temperature:</label>
-                <input type="number" id="temperature" name="temperature" step="0.1" placeholder="e.g., 22.5" required>
-                <button type="submit">Submit</button>
-            </form>
-            
-            <!-- Result will display here after submission -->
-            <div class="result" id="result">
-                Action: Adjust the temperature accordingly.
-            </div>
+        <!-- Wrapper for the form and action section -->
+        <div class="wrapper">
+            <!-- Middle container with the form -->
+            <div class="container">
+                <h1>AI-Enabled Smart Home System</h1>
+                <form action="/set_temperature" method="post">
+                    <label for="temperature">Enter your preferred temperature:</label>
+                    <input type="number" id="temperature" name="temperature" step="0.1" placeholder="e.g., 22.5" required>
+                    <button type="submit">Submit</button>
+                </form>
+                
+                <!-- Result will display here after submission -->
+                <div class="result" id="result">
+                    Action: Adjust the temperature accordingly.
+                </div>
 
-            <!-- Separate container for subscription status -->
-            <div class="subscription-container">
-                <h2>Subscription Status</h2>
-                <div id="subscription-status">
-                    Not Subscribed
+                <!-- Separate container for subscription status -->
+                <div class="subscription-container">
+                    <h2>Subscription Status</h2>
+                    <div id="subscription-status">
+                        Not Subscribed
+                    </div>
+                </div>
+
+                <div class="footer">
+                    &copy; 2024 Smart Home System | Powered by AI
                 </div>
             </div>
 
-            <div class="footer">
-                &copy; 2024 Smart Home System | Powered by AI
+            <!-- Temperature Adjustment Action section -->
+            <div class="action-container">
+                <h2>Temperature Adjustment Action</h2>
+                <div id="action-result">
+                    No action required yet.
+                </div>
             </div>
         </div>
 
-        <!-- Charts container next to the form -->
-        <div class="charts-container">
-            <div class="chart-wrapper">
-                <h2>Temperature Data</h2>
-                <canvas id="temperatureChart"></canvas>
-            </div>
+        <!-- Wrapper for the charts container -->
+        <div class="wrapper">
+            <!-- Charts container -->
+            <div class="charts-container">
+                <div class="chart-wrapper">
+                    <h2>Temperature Data</h2>
+                    <canvas id="temperatureChart"></canvas>
+                </div>
 
-            <div class="chart-wrapper">
-                <h2>Humidity Data</h2>
-                <canvas id="humidityChart"></canvas>
+                <div class="chart-wrapper">
+                    <h2>Humidity Data</h2>
+                    <canvas id="humidityChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
