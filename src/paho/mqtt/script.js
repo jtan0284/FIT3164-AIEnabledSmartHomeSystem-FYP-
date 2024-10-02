@@ -61,10 +61,51 @@ var humidityChart = new Chart(humidityCtx, {
 });
 
 var preferredTemperature = null; // Global variable to store the preferred temperature
+var preferredHumidity = null; // Global variable to store the preferred humidity
 
-document.querySelector('form').addEventListener('submit', function(event) {
+// Form submission to capture both preferred temperature and humidity
+document.getElementById('preferences-form').addEventListener('submit', function(event) {
     event.preventDefault();  // Prevent the form from refreshing the page
-    preferredTemperature = parseFloat(document.getElementById('temperature').value);  // Store the preferred temperature
+
+    // Store the preferred temperature and humidity from the form input fields
+    preferredTemperature = parseFloat(document.getElementById('temperature').value);
+    preferredHumidity = parseFloat(document.getElementById('humidity').value);
+
+    // Prepare form data to send
+    var formData = new FormData();
+    formData.append('temperature', preferredTemperature);
+    formData.append('humidity', preferredHumidity);
+
+    // Send the POST request to Flask to set the temperature and humidity
+    fetch('http://127.0.0.1:5000/set_preferences', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Update the action result in the action container
+        var actionText = data.action;
+        var actionResult = document.getElementById('action-result');
+        actionResult.innerHTML = "Action: " + actionText;
+        
+        // Change the style based on the action for temperature and humidity
+        if (actionText.includes("Temperature: increase")) {
+            actionResult.style.color = "green";
+        } else if (actionText.includes("Temperature: decrease")) {
+            actionResult.style.color = "red";
+        } else {
+            actionResult.style.color = "gray";
+        }
+
+        if (actionText.includes("Humidity: increase")) {
+            actionResult.style.border = "2px solid green";
+        } else if (actionText.includes("Humidity: decrease")) {
+            actionResult.style.border = "2px solid red";
+        } else {
+            actionResult.style.border = "2px solid gray";
+        }
+    })
+    .catch(error => console.log("Error submitting form:", error));
 });
 
 function fetchLiveData() {
@@ -95,18 +136,48 @@ function fetchLiveData() {
         temperatureChart.update();
         humidityChart.update();
 
-        // Compare live temperature with preferred temperature and update action
-        if (preferredTemperature !== null) {
+        // Compare live temperature and humidity with preferred values and update action
+        if (preferredTemperature !== null && preferredHumidity !== null) {
             var actionResult = document.getElementById('action-result');
+            
+            // Compare temperature
+            var tempAction = '';
             if (data.temperature > preferredTemperature) {
-                actionResult.innerHTML = "Action: decrease";
-                actionResult.style.color = "red";
+                tempAction = "Temperature: decrease";
             } else if (data.temperature < preferredTemperature) {
-                actionResult.innerHTML = "Action: increase";
-                actionResult.style.color = "green";
+                tempAction = "Temperature: increase";
             } else {
-                actionResult.innerHTML = "Action: do nothing";
+                tempAction = "Temperature: do nothing";
+            }
+
+            // Compare humidity
+            var humidityAction = '';
+            if (data.humidity > preferredHumidity) {
+                humidityAction = "Humidity: decrease";
+            } else if (data.humidity < preferredHumidity) {
+                humidityAction = "Humidity: increase";
+            } else {
+                humidityAction = "Humidity: do nothing";
+            }
+
+            // Update the action result for both temperature and humidity
+            actionResult.innerHTML = `Action: ${tempAction}, ${humidityAction}`;
+            
+            // Optionally, change the style based on temperature and humidity actions
+            if (tempAction.includes("increase")) {
+                actionResult.style.color = "green";
+            } else if (tempAction.includes("decrease")) {
+                actionResult.style.color = "red";
+            } else {
                 actionResult.style.color = "gray";
+            }
+
+            if (humidityAction.includes("increase")) {
+                actionResult.style.border = "2px solid green";
+            } else if (humidityAction.includes("decrease")) {
+                actionResult.style.border = "2px solid red";
+            } else {
+                actionResult.style.border = "2px solid gray";
             }
         }
     })
@@ -129,40 +200,6 @@ function fetchSubscriptionStatus() {
     })
     .catch(error => console.log("Error fetching subscription status:", error));
 }
-
-document.querySelector('form').addEventListener('submit', function(event) {
-    event.preventDefault();  // Prevent the form from refreshing the page
-
-    // Get the temperature value from the input field
-    var temperature = document.getElementById('temperature').value;
-
-    // Prepare form data to send
-    var formData = new FormData();
-    formData.append('temperature', temperature);
-
-    // Send the POST request to Flask to set the temperature
-    fetch('http://127.0.0.1:5000/set_temperature', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        // Update the action result in the action container
-        var actionResult = document.getElementById('action-result');
-        actionResult.innerHTML = "Action: " + data.action;
-
-        // Optionally, change the style based on the action
-        if (data.action === "increase") {
-            actionResult.style.color = "green";
-        } else if (data.action === "decrease") {
-            actionResult.style.color = "red";
-        } else {
-            actionResult.style.color = "gray";
-        }
-    })
-    .catch(error => console.log("Error submitting form:", error));
-});
-
 
 // Set intervals to regularly fetch live data and subscription status
 setInterval(fetchLiveData, 1000);  // Fetch live data every second

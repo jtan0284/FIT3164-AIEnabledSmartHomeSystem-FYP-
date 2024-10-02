@@ -48,10 +48,12 @@ class Model_training:
         self.messages = []
         self.data = []
         self.target = []
-        self.preference = None
+        self.temperature_preference = None
+        self.humdity_preference = None
         # Initialize an array of 24 lists (one for each hour of the day)
         self.hourly_data = [[] for _ in range(24)]
         self.current_hour = datetime.datetime.now().hour  # Get the current hour (0-23)
+        self.current_minute = datetime.datetime.now().minute
 
         # self.temperature = temperature
         # self.humidity = humidity
@@ -73,7 +75,7 @@ class Model_training:
         and trigger training once the hour changes.
         """
         current_time = datetime.datetime.now().strftime("%H:%M:%S")
-        current_hour = datetime.datetime.now().hour
+        current_minute = datetime.datetime.now().minute
 
         if pref_temperature is None:
             pref_temperature = np.nan
@@ -86,25 +88,38 @@ class Model_training:
         self.data.append([current_time, temperature, humidity,pref_temperature ,pref_humidity])
         
         # If the hour has changed, trigger model training and reset data
-        if current_hour != self.current_hour:
+        if current_minute != self.current_minute:
              # Convert data to DataFrame for model training
             df = pd.DataFrame(self.data, columns=['Timestamp', 'Temperature', 'Humidity','Preferred Temperature','Preferred Humidty'])
+            print(df)
             self.gradient_boosting(df)
             self.data = []  # Reset the data for the new hour
-            self.current_hour = current_hour
+            self.current_minute = current_minute
 
-    def set_user_preference(self, preferred_temperature):
+    def set_user_preference(self, preferred_temperature, preferred_humdity):
         """
         This method updates the user's preferred temperature.
         """
-        self.preference = preferred_temperature
-        print(f"User preference updated to: {self.preference}")
+        self.temperature_preference = preferred_temperature
+
+        self.humdity_preference = preferred_humdity
+
+        print(f"User preferences updated - Temperature: {self.temperature_preference}, Humidity: {self.humdity_preference}")
 
     def temperature_control(self, temperature):
-        if temperature > self.preference:
-            action = "decrease"
-        elif temperature < self.preference:
-            action = "increase"
+        if temperature > self.temperature_preference:
+            action = "decrease temperature"
+        elif temperature < self.temperature_preference:
+            action = "increase temperature"
+        else:
+            action = "do nothing"
+        return(action)
+    
+    def humidity_control(self, humidity):
+        if humidity > self.humdity_preference:
+            action = "decrease humidity"
+        elif humidity < self.humdity_preference:
+            action = "increase humidity"
         else:
             action = "do nothing"
         return(action)
@@ -265,15 +280,20 @@ model = Model_training()
 def index():
     return render_template('website.html')
 
-@app.route('/set_temperature', methods=['POST'])
-def set_temperature():
+@app.route('/set_preferences', methods=['POST'])
+def set_preferences():
     global model
     global temperature
+    global humidity
+
     preferred_temperature = float(request.form['temperature'])  # Get temperature input from form
-    model.set_user_preference(preferred_temperature)
-    action =model.temperature_control(temperature)
+    preferred_humidity = float(request.form['humidity']) # Fer humidity input from form 
+    model.set_user_preference(preferred_temperature, preferred_humidity)
+    temperature_action =model.temperature_control(temperature)
+    humdity_action =model.humidity_control(humidity)
+
     # Return the action as a response to be displayed on the front end
-    return jsonify({'action': action})
+    return jsonify({'action': f"Temperature: {temperature_action}, Humidity: {humdity_action}"})
 
 @app.route('/live_data')
 def live_data():
@@ -299,7 +319,7 @@ def on_connect(client, userdata, flags, rc):
         print(f"Failed to connect, return code {rc}")
 
 def on_message(client, userdata, msg):
-    global temperature, humidity
+    global temperature, humidity, model
     try:
         # Determine if the message is for temperature or humidity based on the topic
         if "temperature" in msg.topic:
@@ -315,8 +335,7 @@ def on_message(client, userdata, msg):
         # Once both temperature and humidity are available, process them
         if temperature is not None and humidity is not None:
             insert_time = datetime.datetime.now().strftime("%H:%M:%S")
-            model.preprocessing(temperature, humidity, insert_time,None, None)  # Pass both values to preprocessing
-            
+            model.preprocessing(temperature, humidity, insert_time,model.temperature_preference, model.humdity_preference)  # Pass both values to preprocessing
             # # Reset values after processing
             # temperature = None
             # humidity = None

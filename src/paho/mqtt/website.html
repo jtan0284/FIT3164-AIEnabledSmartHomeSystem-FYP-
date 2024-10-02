@@ -15,9 +15,13 @@
             <!-- Middle container with the form -->
             <div class="container">
                 <h1>AI-Enabled Smart Home System</h1>
-                <form action="/set_temperature" method="post">
+                <form id="preferences-form" action="/set_preferences" method="post">
                     <label for="temperature">Enter your preferred temperature:</label>
                     <input type="number" id="temperature" name="temperature" step="0.1" placeholder="e.g., 22.5" required>
+                
+                    <label for="humidity">Enter your preferred humidity:</label>
+                    <input type="number" id="humidity" name="humidity" step="0.1" placeholder="e.g., 50" required>
+                
                     <button type="submit">Submit</button>
                 </form>
                 
