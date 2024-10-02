@@ -25,18 +25,12 @@
                     <button type="submit">Submit</button>
                 </form>
                 
+                
                 <!-- Result will display here after submission -->
                 <div class="result" id="result">
                     Action: Adjust the temperature accordingly.
                 </div>
 
-                <!-- Separate container for subscription status -->
-                <div class="subscription-container">
-                    <h2>Subscription Status</h2>
-                    <div id="subscription-status">
-                        Not Subscribed
-                    </div>
-                </div>
 
                 <div class="footer">
                     &copy; 2024 Smart Home System | Powered by AI
@@ -49,6 +43,26 @@
                 <div id="action-result">
                     No action required yet.
                 </div>
+            </div>
+        </div>
+
+        <!-- Separate container for subscription status -->
+        <div class="subscription-container">
+            <h2>Subscription Status</h2>
+            <div id="subscription-status">
+                Not Subscribed
+            </div>
+        </div>
+
+        <div class="prediction-container">
+            <div class="action-container">
+                <h2>Predicted Temperature</h2>
+                <div id="predicted-temperature">Predicted Temperature: N/A</div>
+            </div>
+        
+            <div class="action-container">
+                <h2>Predicted Humidity</h2>
+                <div id="predicted-humidity">Predicted Humidity: N/A</div>
             </div>
         </div>
 
@@ -69,6 +83,10 @@
         </div>
     </div>
 
+    <div id="minute-preferences-link">
+        <a href="http://127.0.0.1:5500/mqtt/minute_preferences.html" target="_blank">View Minute-based Preferences</a>
+    </div>
+    
     <!-- Chart.js Library -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@1.27.0/build/global/luxon.min.js"></script>

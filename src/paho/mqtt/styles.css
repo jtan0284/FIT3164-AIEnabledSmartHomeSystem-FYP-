@@ -161,3 +161,47 @@ button:hover {
     box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
     width: 100%;
 }
+
+.prediction-container {
+    display: flex;
+    justify-content: center; /* Center the items horizontally */
+    align-items: flex-start; /* Align the items at the top */
+    gap: 10px; /* Adjust the gap between the two containers */
+    margin-top: 20px;
+}
+
+.container-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;  /* Center align the content horizontally */
+    width: 100%; /* Optional: adjust width as needed */
+    margin-top: 20px; /* Add spacing from top */
+}
+
+.subscription-container,
+.predicted-temperature-container,
+.predicted-humidity-container {
+    background-color: white;
+    padding: 10px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    width: 250px; /* Ensure all containers have the same width */
+    text-align: center;
+    margin-bottom: 20px; /* Add spacing between each container */
+}
+
+/* Styling for the subscription text */
+#subscription-status {
+    font-size: 16px;
+    color: #333;
+    padding: 10px;
+    background-color: #f0f4f7;
+    border-radius: 5px;
+}
+
+/* Optional: Adjust the heading style */
+.subscription-container h2 {
+    font-size: 18px;
+    margin-bottom: 10px;
+    color: #333;
+}

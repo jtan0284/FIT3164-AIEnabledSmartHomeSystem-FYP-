@@ -55,9 +55,12 @@ class Model_training:
         self.current_hour = datetime.datetime.now().hour  # Get the current hour (0-23)
         self.current_minute = datetime.datetime.now().minute
 
-        # self.temperature = temperature
-        # self.humidity = humidity
+        self.latest_temperature_prediction = None
+        self.latest_humidity_prediction = None
         # self.insert_time = insert_time
+
+        self.preferred_temperature_per_minute = [None] * 60
+        self.preferred_humidity_per_minute = [None] * 60
 
         # # self.regression()
         # self.tests()
@@ -90,7 +93,7 @@ class Model_training:
         # If the hour has changed, trigger model training and reset data
         if current_minute != self.current_minute:
              # Convert data to DataFrame for model training
-            df = pd.DataFrame(self.data, columns=['Timestamp', 'Temperature', 'Humidity','Preferred Temperature','Preferred Humidty'])
+            df = pd.DataFrame(self.data, columns=['Timestamp', 'Temperature', 'Humidity','Preferred Temperature','Preferred Humidity'])
             print(df)
             self.gradient_boosting(df)
             self.data = []  # Reset the data for the new hour
@@ -103,6 +106,13 @@ class Model_training:
         self.temperature_preference = preferred_temperature
 
         self.humdity_preference = preferred_humdity
+
+        # Get the current minute (0-59)
+        current_minute = datetime.datetime.now().minute
+
+        # Store the preferred temperature and humidity for the current minute
+        self.preferred_temperature_per_minute[current_minute] = self.temperature_preference
+        self.preferred_humidity_per_minute[current_minute] = self.humdity_preference
 
         print(f"User preferences updated - Temperature: {self.temperature_preference}, Humidity: {self.humdity_preference}")
 
@@ -128,8 +138,8 @@ class Model_training:
         data = self.handle_missing(data)        
 
         X = data[['Temperature','Humidity']]  
-        y_temp = data['Preferred_Temperature']  # Target for temperature prediction
-        y_humid = data['Preferred_Humidity'] # Target for humidity prediction
+        y_temp = data['Preferred Temperature']  # Target for temperature prediction
+        y_humid = data['Preferred Humidity'] # Target for humidity prediction
 
         # Convert to numpy arrays if necessary
         X = X.to_numpy()  # Convert X to NumPy array
@@ -151,6 +161,8 @@ class Model_training:
         mse_temp = mean_squared_error(y_test_temp, predictions_temp)
         print(f"Mean Squared Error (Temperature): {mse_temp}")
 
+        self.latest_temperature_prediction = predictions_temp[-1]
+
         # Gradient boosting for humidity data 
         y_humid = y_humid.to_numpy()
         X_train_hum, X_test_hum, y_train_hum, y_test_hum = train_test_split(X, y_humid, test_size=0.2, random_state=42)
@@ -164,24 +176,79 @@ class Model_training:
         mse_humid = mean_squared_error(y_test_hum, predictions_humid)
         print(f"Mean Squared Error (Humidity): {mse_humid}")
 
+        self.latest_humidity_prediction = predictions_humid[-1]
+
+        print(f"Latest temperature prediction: {self.latest_temperature_prediction}")
+        print(f"Latest humidity prediction: {self.latest_humidity_prediction}")
+
         # Plot Predicted vs Actual values for temperature
-        self.plot_predicted_vs_actual(y_test_temp, predictions_temp, "Temperature")
+        self.plot_predicted_vs_actual(y_test_temp, predictions_temp, y_test_hum, predictions_humid)
 
         return
-
-    def plot_predicted_vs_actual(self, y_true, y_pred, label):
+    
+    def get_humidity_prediction(self):
+        return self.latest_humidity_prediction
+    
+    def get_temperature_prediction(self):
+        return self.latest_temperature_prediction
+    
+    def get_minute_preferences(self):
         """
-        Plot the predicted vs actual user preferences.
+        Returns the stored preferred temperature and humidity for every minute (0-59).
         """
-        plt.figure(figsize=(8, 6))
-        plt.scatter(y_true, y_pred, color='blue', label=f'Predicted vs Actual {label}')
-        plt.plot([y_true.min(), y_true.max()], [y_true.min(), y_true.max()], color='red', linestyle='--', lw=2, label='Ideal Line')
+        return {
+            'temperature_per_minute': self.preferred_temperature_per_minute,
+            'humidity_per_minute': self.preferred_humidity_per_minute
+        }
+    
+    def handle_missing(self, data):
+        """
+        Handle missing values using KNN Imputer.
+        The imputer uses the k-nearest neighbors approach to estimate and fill missing values.
+        """
         
-        plt.xlabel(f'Actual {label}')
-        plt.ylabel(f'Predicted {label}')
-        plt.title(f'Predicted vs Actual {label}')
+        # Select the relevant columns for imputation (Temperature, Humidity, Preferred Temperature, Preferred Humidity)
+        columns_to_impute = ['Preferred Temperature', 'Preferred Humidity']
+
+        # Initialize KNNImputer with the desired number of neighbors (k=3 is a good starting point)
+        imputer = KNNImputer(n_neighbors=3)
+
+        # Apply KNN Imputer on the selected columns
+        data[columns_to_impute] = imputer.fit_transform(data[columns_to_impute])
+        
+        print("Missing values imputed using KNN Imputer.")
+        print(data)
+        return data
+
+
+    def plot_predicted_vs_actual(self, y_true_temp, y_pred_temp, y_true_humid, y_pred_humid):
+        """
+        Plot the predicted vs actual user preferences for both temperature and humidity.
+        """
+        # Plot for Temperature
+        plt.figure(figsize=(12, 6))
+        
+        # Plot Temperature Results
+        plt.subplot(1, 2, 1)  # Create two side-by-side plots
+        plt.scatter(y_true_temp, y_pred_temp, color='blue', label='Predicted vs Actual Temperature')
+        plt.plot([y_true_temp.min(), y_true_temp.max()], [y_true_temp.min(), y_true_temp.max()], color='red', linestyle='--', lw=2, label='Ideal Line')
+        plt.xlabel('Actual Temperature')
+        plt.ylabel('Predicted Temperature')
+        plt.title('Predicted vs Actual Temperature')
         plt.legend(loc="upper left")
-        plt.show()
+
+        # Plot Humidity Results
+        plt.subplot(1, 2, 2)
+        plt.scatter(y_true_humid, y_pred_humid, color='green', label='Predicted vs Actual Humidity')
+        plt.plot([y_true_humid.min(), y_true_humid.max()], [y_true_humid.min(), y_true_humid.max()], color='red', linestyle='--', lw=2, label='Ideal Line')
+        plt.xlabel('Actual Humidity')
+        plt.ylabel('Predicted Humidity')
+        plt.title('Predicted vs Actual Humidity')
+        plt.legend(loc="upper left")
+
+    # Show the plots
+    plt.tight_layout()  # Adjust layout so labels don't overlap
+    plt.show()
 
     def regression(self):
         X = self.dataframe[['Temperature']]
@@ -275,10 +342,25 @@ class Model_training:
 # Initialize the model
 model = Model_training()
 
+
 # Flask Routes
 @app.route('/')
 def index():
     return render_template('website.html')
+
+@app.route('/minute_preferences')
+def minute_preferences_page():
+    return render_template('minute_preferences.html', preferences=model.minute_preferences)  # Render a new HTML page for minute-based preferences
+
+@app.route('/get_minute_preferences', methods=['GET'])
+def get_minute_preferences():
+    global model
+    minute_preferences = model.get_minute_preferences()
+
+    return jsonify({
+        'temperature_per_minute': minute_preferences['temperature_per_minute'],
+        'humidity_per_minute': minute_preferences['humidity_per_minute']
+    })
 
 @app.route('/set_preferences', methods=['POST'])
 def set_preferences():
@@ -289,11 +371,21 @@ def set_preferences():
     preferred_temperature = float(request.form['temperature'])  # Get temperature input from form
     preferred_humidity = float(request.form['humidity']) # Fer humidity input from form 
     model.set_user_preference(preferred_temperature, preferred_humidity)
-    temperature_action =model.temperature_control(temperature)
-    humdity_action =model.humidity_control(humidity)
+    temperature_action = model.temperature_control(temperature)
+    humidity_action = model.humidity_control(humidity)
+
+    predicted_temperature = model.get_humidity_prediction()
+    predicted_humidity = model.get_temperature_prediction()
+
+    print("niggers" + str(predicted_temperature))
 
     # Return the action as a response to be displayed on the front end
-    return jsonify({'action': f"Temperature: {temperature_action}, Humidity: {humdity_action}"})
+    return jsonify({
+        'temperature_action': temperature_action,
+        'humidity_action': humidity_action,
+        'predicted_temperature': predicted_temperature,
+        'predicted_humidity': predicted_humidity
+    })
 
 @app.route('/live_data')
 def live_data():
@@ -356,6 +448,7 @@ def start_mqtt():
 
     client.loop_forever()
 
+model = None
 # Run Flask and MQTT in parallel
 if __name__ == "__main__":
     model = Model_training()

@@ -83,27 +83,34 @@ document.getElementById('preferences-form').addEventListener('submit', function(
     })
     .then(response => response.json())
     .then(data => {
-        // Update the action result in the action container
-        var actionText = data.action;
         var actionResult = document.getElementById('action-result');
-        actionResult.innerHTML = "Action: " + actionText;
-        
-        // Change the style based on the action for temperature and humidity
-        if (actionText.includes("Temperature: increase")) {
+        actionResult.innerHTML = 
+            "Action: Temperature: " + data.temperature_action + ", Humidity: " + data.humidity_action;
+
+        // Update the predicted temperature and humidity
+        document.getElementById('predicted-temperature').innerHTML = 
+            "Predicted Temperature: " + (data.predicted_temperature !== null ? data.predicted_temperature + "°C" : "N/A");
+        document.getElementById('predicted-humidity').innerHTML = 
+            "Predicted Humidity: " + (data.predicted_humidity !== null ? data.predicted_humidity + "%" : "N/A");
+
+        // Change the style based on the temperature action
+        if (data.temperature_action === "increase temperature") {
             actionResult.style.color = "green";
-        } else if (actionText.includes("Temperature: decrease")) {
+        } else if (data.temperature_action === "decrease temperature") {
             actionResult.style.color = "red";
         } else {
             actionResult.style.color = "gray";
         }
 
-        if (actionText.includes("Humidity: increase")) {
+        // Change the border color based on the humidity action
+        if (data.humidity_action === "increase humidity") {
             actionResult.style.border = "2px solid green";
-        } else if (actionText.includes("Humidity: decrease")) {
+        } else if (data.humidity_action === "decrease humidity") {
             actionResult.style.border = "2px solid red";
         } else {
             actionResult.style.border = "2px solid gray";
         }
+
     })
     .catch(error => console.log("Error submitting form:", error));
 });
