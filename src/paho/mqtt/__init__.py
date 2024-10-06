@@ -116,12 +116,12 @@ class Model_training:
 
         self.humdity_preference = preferred_humdity
 
-        # Get the current minute (0-59)
-        current_minute = datetime.datetime.now().minute
+        # # Get the current minute (0-59)
+        # current_minute = datetime.datetime.now().minute
 
-        # Store the preferred temperature and humidity for the current minute
-        self.preferred_temperature_per_minute[current_minute] = self.temperature_preference
-        self.preferred_humidity_per_minute[current_minute] = self.humdity_preference
+        # # Store the preferred temperature and humidity for the current minute
+        # self.preferred_temperature_per_minute[current_minute] = self.temperature_preference
+        # self.preferred_humidity_per_minute[current_minute] = self.humdity_preference
 
         print(f"User preferences updated - Temperature: {self.temperature_preference}, Humidity: {self.humdity_preference}")
 
@@ -198,6 +198,13 @@ class Model_training:
 
         # Plot Predicted vs Actual values for temperature
         # self.plot_predicted_vs_actual(y_test_temp, predictions_temp, y_test_hum, predictions_humid)
+
+         # Get the current minute (0-59)
+        current_minute = datetime.datetime.now().minute
+
+        # Store the preferred temperature and humidity for the current minute
+        self.preferred_temperature_per_minute[current_minute] = self.latest_temperature_prediction
+        self.preferred_humidity_per_minute[current_minute] = self.latest_humidity_prediction
 
         return
     
@@ -432,6 +439,7 @@ def live_action():
 
     # Concatenate the actions into a single string
     action_message = f"Temperature Action: {temperature_action}, Humidity Action: {humidity_action}"
+    transmitted_message = f""
 
 
     # Publish the temperature_action and humidity_action to MQTT

@@ -14,7 +14,7 @@ document.getElementById('login-form').addEventListener('submit', function(event)
     // Send the POST request to Flask to log in the user
     fetch('http://127.0.0.1:5000/login', {
         method: 'POST',
-        body: formData
+        body: formData,
     })
     .then(response => response.json())  // Parse the JSON response from Flask
     .then(data => {
@@ -27,7 +27,7 @@ document.getElementById('login-form').addEventListener('submit', function(event)
 
             // Redirect to the dashboard (or any other page)
             setTimeout(() => {
-                window.location.href = "http://127.0.0.1:5000/dashboard";
+                window.location.href = "http://127.0.0.1:5500/mqtt/website.html";
             }, 1000);  // Redirect after 1 second
         } else {
             // If login fails, display the error message
