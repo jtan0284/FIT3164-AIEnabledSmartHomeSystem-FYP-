@@ -24,7 +24,8 @@ from sklearn.metrics import roc_curve, auc
 import numpy as np
 
 # neceasary packages for date time
-import datetime 
+import datetime
+import time
 
 # neceassary packages for intergration with HTML
 from flask import Flask, request, render_template, jsonify
@@ -61,6 +62,8 @@ class Model_training:
 
         self.preferred_temperature_per_minute = [None] * 60
         self.preferred_humidity_per_minute = [None] * 60
+
+        self.subscription_status = False
 
         # # self.regression()
         # self.tests()
@@ -99,6 +102,12 @@ class Model_training:
             self.data = []  # Reset the data for the new hour
             self.current_minute = current_minute
 
+    def subscribe_status(self, status):
+        if status == True:
+            self.subscription_status = True
+        else:
+            self.subscribe_status = False
+
     def set_user_preference(self, preferred_temperature, preferred_humdity):
         """
         This method updates the user's preferred temperature.
@@ -117,20 +126,26 @@ class Model_training:
         print(f"User preferences updated - Temperature: {self.temperature_preference}, Humidity: {self.humdity_preference}")
 
     def temperature_control(self, temperature):
-        if temperature > self.temperature_preference:
-            action = "decrease temperature"
-        elif temperature < self.temperature_preference:
-            action = "increase temperature"
-        else:
+        if self.temperature_preference is not None:
+            if temperature > self.temperature_preference:
+                action = "decrease temperature"
+            elif temperature < self.temperature_preference:
+                action = "increase temperature"
+            else:
+                action = "do nothing"
+        else: 
             action = "do nothing"
         return(action)
     
     def humidity_control(self, humidity):
-        if humidity > self.humdity_preference:
-            action = "decrease humidity"
-        elif humidity < self.humdity_preference:
-            action = "increase humidity"
-        else:
+        if self.humdity_preference is not None:
+            if humidity > self.humdity_preference:
+                action = "decrease humidity"
+            elif humidity < self.humdity_preference:
+                action = "increase humidity"
+            else:
+                action = "do nothing"
+        else: 
             action = "do nothing"
         return(action)
 
@@ -182,7 +197,7 @@ class Model_training:
         print(f"Latest humidity prediction: {self.latest_humidity_prediction}")
 
         # Plot Predicted vs Actual values for temperature
-        self.plot_predicted_vs_actual(y_test_temp, predictions_temp, y_test_hum, predictions_humid)
+        # self.plot_predicted_vs_actual(y_test_temp, predictions_temp, y_test_hum, predictions_humid)
 
         return
     
@@ -246,9 +261,10 @@ class Model_training:
         plt.title('Predicted vs Actual Humidity')
         plt.legend(loc="upper left")
 
-    # Show the plots
-    plt.tight_layout()  # Adjust layout so labels don't overlap
-    plt.show()
+        # Show the plots
+        plt.tight_layout()  # Adjust layout so labels don't overlap
+
+        return 
 
     def regression(self):
         X = self.dataframe[['Temperature']]
@@ -350,17 +366,31 @@ def index():
 
 @app.route('/minute_preferences')
 def minute_preferences_page():
-    return render_template('minute_preferences.html', preferences=model.minute_preferences)  # Render a new HTML page for minute-based preferences
+     return render_template('minute_preferences.html')
 
 @app.route('/get_minute_preferences', methods=['GET'])
 def get_minute_preferences():
     global model
     minute_preferences = model.get_minute_preferences()
 
-    return jsonify({
-        'temperature_per_minute': minute_preferences['temperature_per_minute'],
-        'humidity_per_minute': minute_preferences['humidity_per_minute']
-    })
+    # Filter out the None values and get the first non-None element for temperature and humidity
+    filtered_temperature = next((temp for temp in minute_preferences['temperature_per_minute'] if temp is not None), None)
+    filtered_humidity = next((humid for humid in minute_preferences['humidity_per_minute'] if humid is not None), None)
+
+    # Check if we found any valid values
+    if filtered_temperature is not None and filtered_humidity is not None:
+        return jsonify({
+            'filtered_temperature': filtered_temperature,  # First valid temperature
+            'filtered_humidity': filtered_humidity,        # First valid humidity
+            'temperature_per_minute': minute_preferences['temperature_per_minute'],  # Full temperature array
+            'humidity_per_minute': minute_preferences['humidity_per_minute']         # Full humidity array
+        })
+    else:
+        return jsonify({
+            'error': 'No valid temperature or humidity data available',
+            'temperature_per_minute': minute_preferences['temperature_per_minute'],  # Full temperature array
+            'humidity_per_minute': minute_preferences['humidity_per_minute']         # Full humidity array
+        })
 
 @app.route('/set_preferences', methods=['POST'])
 def set_preferences():
@@ -369,23 +399,11 @@ def set_preferences():
     global humidity
 
     preferred_temperature = float(request.form['temperature'])  # Get temperature input from form
-    preferred_humidity = float(request.form['humidity']) # Fer humidity input from form 
+    preferred_humidity = float(request.form['humidity'])  # Get humidity input from form
     model.set_user_preference(preferred_temperature, preferred_humidity)
-    temperature_action = model.temperature_control(temperature)
-    humidity_action = model.humidity_control(humidity)
-
-    predicted_temperature = model.get_humidity_prediction()
-    predicted_humidity = model.get_temperature_prediction()
-
-    print("niggers" + str(predicted_temperature))
-
-    # Return the action as a response to be displayed on the front end
-    return jsonify({
-        'temperature_action': temperature_action,
-        'humidity_action': humidity_action,
-        'predicted_temperature': predicted_temperature,
-        'predicted_humidity': predicted_humidity
-    })
+    
+    # Return a simple success message
+    return jsonify({'message': 'Preferences updated successfully'})
 
 @app.route('/live_data')
 def live_data():
@@ -397,18 +415,62 @@ def live_data():
     }
     return jsonify(data)
 
+@app.route('/live_action', methods=['GET'])
+def live_action():
+    global model
+    global temperature
+    global humidity
+
+    # Check if live temperature and humidity are available
+    if temperature is not None and humidity is not None:
+        temperature_action = model.temperature_control(temperature)
+        humidity_action = model.humidity_control(humidity)
+    else:
+        # Fallback if no live data is available
+        temperature_action = "None"
+        humidity_action = "None"
+
+    # Concatenate the actions into a single string
+    action_message = f"Temperature Action: {temperature_action}, Humidity Action: {humidity_action}"
+
+
+    # Publish the temperature_action and humidity_action to MQTT
+    client2 = paho.Client()
+    client2.connect('broker.hivemq.com', 1883)
+    client2.loop_start()  # Start the MQTT loop
+
+    # Publish both actions to separate topics
+    client2.publish('mds06/aitotx', action_message, qos=1)
+    print(action_message)
+    # Return the computed actions as a response
+    return jsonify({
+        'temperature_action': temperature_action,
+        'humidity_action': humidity_action,
+    }) 
+
+def on_publish(client, userdata, mid):
+    print("mid: "+str(mid)) 
+
 @app.route('/subscription_status')
 def subscription_status():
-    subscribed = True  # Example logic
-    return jsonify({'subscribed': subscribed})
+    global model
+    status = None
+    if model.subscription_status == True:
+        status = 'subscribed'
+    else:
+        status = 'not connected'
+    return jsonify({'subscribed': status})
 
 
 # MQTT Callback functions
 def on_connect(client, userdata, flags, rc):
+    global model
     if rc == 0:
         print("Connected successfully to MQTT broker")
+        model.subscribe_status(False)
     else:
         print(f"Failed to connect, return code {rc}")
+        model.subscribe_status(True)
 
 def on_message(client, userdata, msg):
     global temperature, humidity, model
@@ -448,13 +510,14 @@ def start_mqtt():
 
     client.loop_forever()
 
-model = None
 # Run Flask and MQTT in parallel
 if __name__ == "__main__":
     model = Model_training()
     # Start MQTT in a separate thread
     mqtt_thread = threading.Thread(target=start_mqtt)
     mqtt_thread.start()
+
+    
 
     # Run the Flask app in the main thread
     app.run(debug=True, use_reloader=False, port=5000)  # Use reloader=False to prevent double threading

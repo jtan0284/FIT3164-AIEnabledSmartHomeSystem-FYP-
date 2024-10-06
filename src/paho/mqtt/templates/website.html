@@ -15,7 +15,7 @@
             <!-- Middle container with the form -->
             <div class="container">
                 <h1>AI-Enabled Smart Home System</h1>
-                <form id="preferences-form" action="/set_preferences" method="post">
+                <form id="preferences-form" class="form-container" action="/set_preferences" method="post">
                     <label for="temperature">Enter your preferred temperature:</label>
                     <input type="number" id="temperature" name="temperature" step="0.1" placeholder="e.g., 22.5" required>
                 
@@ -23,44 +23,27 @@
                     <input type="number" id="humidity" name="humidity" step="0.1" placeholder="e.g., 50" required>
                 
                     <button type="submit">Submit</button>
-                </form>
-                
+                </form>            
                 
                 <!-- Result will display here after submission -->
                 <div class="result" id="result">
                     Action: Adjust the temperature accordingly.
                 </div>
 
-
                 <div class="footer">
                     &copy; 2024 Smart Home System | Powered by AI
                 </div>
             </div>
-
-            <!-- Temperature Adjustment Action section -->
-            <div class="action-container">
-                <h2>Temperature Adjustment Action</h2>
-                <div id="action-result">
-                    No action required yet.
-                </div>
-            </div>
         </div>
 
-        <!-- Separate container for subscription status -->
-        <div class="subscription-container">
-            <h2>Subscription Status</h2>
-            <div id="subscription-status">
-                Not Subscribed
-            </div>
-        </div>
-
+        <!-- Prediction containers -->
         <div class="prediction-container">
             <div class="action-container">
                 <h2>Predicted Temperature</h2>
                 <div id="predicted-temperature">Predicted Temperature: N/A</div>
             </div>
         
-            <div class="action-container">
+            <div class="action-container2">
                 <h2>Predicted Humidity</h2>
                 <div id="predicted-humidity">Predicted Humidity: N/A</div>
             </div>
@@ -83,9 +66,34 @@
         </div>
     </div>
 
-    <div id="minute-preferences-link">
-        <a href="http://127.0.0.1:5500/mqtt/minute_preferences.html" target="_blank">View Minute-based Preferences</a>
+    <div class="temperature-action-container">
+        <h2>Live Temperature Action</h2>
+        <div id="live-temperature-action">N/A</div>
     </div>
+    
+    <div class="humidity-action-container">
+        <h2>Live Humidity Action</h2>
+        <div id="live-humidity-action">N/A</div>
+    </div>
+
+    <div class="live-data-container">
+        <div class="live-temperature-container">
+            <h2>Current Temperature</h2>
+            <div id="live-temperature">N/A</div>
+        </div>
+        
+        <div class="live-humidity-container">
+            <h2>Current Humidity</h2>
+            <div id="live-humidity">N/A</div>
+        </div>
+    </div>
+    
+    <div id="minute-preferences-wrapper" class="minute-preferences-wrapper">
+        <div class="minute-container">
+            <a href="http://127.0.0.1:5000/mqtt/templates/minute_preferences.html" target="_blank">>    View Minute-based Preferences</a>
+        </div>
+    </div>
+    
     
     <!-- Chart.js Library -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

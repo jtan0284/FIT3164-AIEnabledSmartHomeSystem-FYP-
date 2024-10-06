@@ -85,13 +85,7 @@ document.getElementById('preferences-form').addEventListener('submit', function(
     .then(data => {
         var actionResult = document.getElementById('action-result');
         actionResult.innerHTML = 
-            "Action: Temperature: " + data.temperature_action + ", Humidity: " + data.humidity_action;
-
-        // Update the predicted temperature and humidity
-        document.getElementById('predicted-temperature').innerHTML = 
-            "Predicted Temperature: " + (data.predicted_temperature !== null ? data.predicted_temperature + "°C" : "N/A");
-        document.getElementById('predicted-humidity').innerHTML = 
-            "Predicted Humidity: " + (data.predicted_humidity !== null ? data.predicted_humidity + "%" : "N/A");
+            "Action: "+ "/n" + "Temperature: " + data.temperature_action + "/n" +"Humidity: " + data.humidity_action;
 
         // Change the style based on the temperature action
         if (data.temperature_action === "increase temperature") {
@@ -120,6 +114,9 @@ function fetchLiveData() {
     .then(response => response.json())
     .then(data => {
         var timestamp = new Date();  // Get the current timestamp
+
+        document.getElementById('live-temperature').innerHTML = 'Temperature: ' + (data.temperature ? data.temperature + '°C' : 'N/A');
+        document.getElementById('live-humidity').innerHTML = 'Humidity: ' + (data.humidity ? data.humidity + '%' : 'N/A');
 
         // Update the temperature chart
         temperatureChart.data.labels.push(timestamp);
@@ -191,6 +188,37 @@ function fetchLiveData() {
     .catch(error => console.log("Error fetching live data:", error));
 }
 
+// Function to fetch the minute-based preferences from Flask
+function fetchMinutePreferences() {
+    fetch('http://127.0.0.1:5000/get_minute_preferences')
+    .then(response => response.json())
+    .then(data => {
+        var temperaturePerMinute = data.filtered_temperature;
+        var humidityPerMinute = data.filtered_humidity;
+
+        // Get the HTML elements where you want to display the data
+        var tempDiv = document.getElementById('predicted-temperature');
+        var humidDiv = document.getElementById('predicted-humidity');
+
+        // Clear old content before adding new data
+        tempDiv.innerHTML = ''; 
+        humidDiv.innerHTML = '';
+
+         // Directly insert the temperature and humidity data into the divs
+        tempDiv.innerHTML = `Predicted Temperature: ${temperaturePerMinute}°C`;
+        humidDiv.innerHTML = `Predicted Humidity: ${humidityPerMinute}%`;
+    })
+    .catch(error => console.log("Error fetching minute preferences:", error));
+}
+
+// Call the function every 60 seconds to update the data
+setInterval(fetchMinutePreferences, 60000);  // 60000 ms = 60 seconds
+
+// Optionally, call the function immediately on page load as well
+fetchMinutePreferences();
+
+
+
 // Fetch subscription status from Flask and update the subscription status element
 function fetchSubscriptionStatus() {
     fetch('http://127.0.0.1:5000/subscription_status')
@@ -207,6 +235,26 @@ function fetchSubscriptionStatus() {
     })
     .catch(error => console.log("Error fetching subscription status:", error));
 }
+
+// Function to fetch live temperature and humidity actions
+function fetchLiveActions() {
+    fetch('http://127.0.0.1:5000/live_action')
+    .then(response => response.json())
+    .then(data => {
+        // Get the live action divs from the HTML
+        var liveTempActionDiv = document.getElementById('live-temperature-action');
+        var liveHumidActionDiv = document.getElementById('live-humidity-action');
+
+        // Update the content with litemperaturechartve temperature and humidity actions
+        liveTempActionDiv.innerHTML = "Temperature Action: " + data.temperature_action;
+        liveHumidActionDiv.innerHTML = "Humidity Action: " + data.humidity_action;
+    })
+    .catch(error => console.log("Error fetching live actions:", error));
+}
+
+// Call the fetchLiveActions function every 5 seconds to update live actions
+setInterval(fetchLiveActions, 5000);
+
 
 // Set intervals to regularly fetch live data and subscription status
 setInterval(fetchLiveData, 1000);  // Fetch live data every second

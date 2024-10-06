@@ -1,0 +1,422 @@
+/* Basic reset for margin and padding */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f0f4f7;
+    display: flex;
+    flex-basis: 500px;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    flex-direction: column;
+}
+
+/* Flexbox to align the form and charts side by side */
+.flex-container {
+    display: flex;
+    justify-content: center; /* Center the content horizontally */
+    align-items: flex-start; /* Align the items at the top */
+    width: 100%;
+    padding: 10px;
+    gap: 15px;
+    max-width: 1200px; /* Set a max-width to avoid it stretching too far */
+    margin: 0 auto;
+}
+
+.container {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    text-align: center;
+    position: relative;
+    top: 180px;
+    right: 0px;
+    left: 600px;
+    width: 400px;
+    height: 535px;
+}
+
+h1 {
+    color: #333;
+    font-size: 28px;
+    margin-bottom: 0px;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    flex-basis: 500px;
+}
+
+label {
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: #555;
+}
+
+input[type="number"] {
+    padding: 10px;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    font-size: 16px;
+    transition: border-color 0.3s;
+}
+
+input[type="number"]:focus {
+    border-color: #007bff;
+    outline: none;
+}
+
+button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 12px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+.result {
+    margin-top: 20px;
+    font-size: 18px;
+    color: #333;
+    padding: 15px;
+    background-color: #e6f7ff;
+    border-left: 5px solid #007bff;
+    border-radius: 5px;
+    position: relative;
+    top: 70px;
+}
+
+.footer {
+    margin-top: 30px;
+    font-size: 12px;
+    color: #888;
+    position: relative;
+    top: 50px;
+}
+
+/* Charts container */
+.charts-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;  /* Align charts to the left of this container */
+    margin-left: 15px;
+    position: relative;
+    top: 180px;
+    right: 75px;
+}
+
+.chart-wrapper {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+    width: 500px;  /* Set chart width */
+}
+
+/* Action container styling */
+.action-container {
+    background-color: white;
+    padding: 10px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    width: 315px;  /* Full width of the container */
+    margin-right: 5px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    text-align: center;
+    position: relative;
+    right: 170px;
+    bottom: 0px;
+    top: 0px;
+}
+
+.action-container2 {
+    background-color: white;
+    padding: 10px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    width: 315px;  /* Full width of the container */
+    margin-right: 5px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    text-align: center;
+    position: relative;
+    right: 500px;
+    bottom: 0px;
+    top: 90px;
+}
+
+.temperature-action-container {
+    background-color: white;
+    padding: 10px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    width: 315px;  /* Full width of the container */
+    margin-right: 5px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    text-align: center;
+    position: relative;
+    bottom: 500px;
+    right: 370px;
+}
+
+.humidity-action-container {
+    background-color: white;
+    padding: 10px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    width: 315px;  /* Full width of the container */
+    margin-right: 5px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    text-align: center;
+    position: relative;
+    bottom: 520px;
+    right: 370px;
+}
+
+.temperature-action-container  h2 {
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.humidity-action-container h2 {
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.action-container h2 {
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.action-container2 h2 {
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+#action-result {
+    font-size: 16px;
+    color: #555;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+    border-left: 5px solid #007bff;
+}
+
+/* General wrapper styling */
+.wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: 20px;
+    width: 100%;
+}
+
+/* Optional: Style for wrapper with multiple sections */
+.wrapper .section {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+}
+
+.prediction-container {
+    display: flex;
+    justify-content: center; /* Center the items horizontally */
+    align-items: flex-start; /* Align the items at the top */
+    gap: 10px; /* Adjust the gap between the two containers */
+    margin-top: 20px;
+    position: relative;
+    top: 535px;
+    left: 22px;
+}
+
+.container-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;  /* Center align the content horizontally */
+    width: 100%; /* Optional: adjust width as needed */
+    margin-top: 20px; /* Add spacing from top */
+}
+
+
+.predicted-temperature-container,
+.predicted-humidity-container {
+    background-color: white;
+    padding: 10px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    width: 250px; /* Ensure all containers have the same width */
+    text-align: center;
+    margin-bottom: 20px; /* Add spacing between each container */
+}
+
+.subscription-container {
+    background-color: white;
+    padding: 10px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    width: 350px;
+    text-align: center;
+    margin-bottom: 20px; /* Add margin below it for spacing */
+    position: relative;
+    bottom: 660px;  
+    right: 400px;
+    width: 315px;
+}
+
+/* Styling for the subscription text */
+#subscription-status {
+    font-size: 16px;
+    color: #333;
+    padding: 10px;
+    background-color: #f0f4f7;
+    border-radius: 5px;
+}
+
+/* Optional: Adjust the heading style */
+.subscription-container h2 {
+    font-size: 18px;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+/* Styling for the form container */
+.form-container {
+    display: flex;
+    flex-direction: column;
+    gap: 5px; /* Adjusts the spacing between form elements */
+    position: relative;
+    top: 50px;
+}
+
+/* Styling for input fields */
+.form-container input {
+    padding: 10px;
+    font-size: 16px;
+}
+
+/* Styling for the submit button */
+.form-container button {
+    padding: 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.form-container button:hover {
+    background-color: #0056b3;
+}
+
+.minute-preferences-link {
+    position: relative;
+    top: 400px;
+    right: 400px;
+    left: 0px;
+}
+
+.minute-preferences-wrapper {
+    text-align: left; /* Center the link */
+    margin-top: 20px; /* Add some space above the link */
+}
+
+.minute-container {
+    background-color: white; /* Set background color */
+    padding: 10px; /* Add padding for spacing */
+    border-radius: 10px; /* Make the corners rounded */
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1); /* Add a shadow for depth */
+    display: inline-block; /* Ensure the container sizes to the content */
+    width: 735px;
+    position: relative;
+    bottom: 370px;
+    height: 70px;
+    right: 160px;
+}
+
+.minute-container a {
+    text-decoration: none; /* Remove underline */
+    color: #007bff; /* Set link color */
+    font-weight: bold; /* Make the link text bold */
+    font-size: 40px;
+}
+
+.minute-container a:hover {
+    color: #0056b3; /* Change color on hover */
+}
+
+
+.live-data-container {
+    display: flex; /* Align containers horizontally */
+    justify-content: space-between; /* Add space between the two containers */
+    margin-top: 20px; /* Add margin to the top */
+    gap: 20px; /* Space between the live temperature and live humidity */
+}
+
+.live-temperature-container {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    width: 300px; /* Width of the containers */
+    text-align: center;
+    position: relative;
+    width: 150px;
+    bottom: 545px;
+    right: 370px;
+    height: 180px;
+}
+
+.live-humidity-container {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    width: 300px; /* Width of the containers */
+    text-align: center;
+    position: relative;
+    width: 150px;
+    bottom: 545px;
+    right: 375px;
+    height: 180px;
+}
+
+.live-temperature-container h2, .live-humidity-container h2 {
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.live-temperature-container div, .live-humidity-container div {
+    font-size: 16px;
+    color: #555;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+    border-left: 5px solid #007bff;
+}
