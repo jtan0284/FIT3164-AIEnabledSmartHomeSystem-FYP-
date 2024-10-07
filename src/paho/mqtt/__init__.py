@@ -1,22 +1,43 @@
+# MQTT Communication Libraries
 import paho.mqtt.client as paho
+
+# Machine Learning Libraries
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report
+
+# neceasary packages for model buidling for missing values
+from sklearn.impute import KNNImputer
+
+# Visualization Library
+import matplotlib.pyplot as plt
+
+# To parse JSON messages
+import json  
+
+# neceassary packages for intergration with HTML
+from flask import Flask, request, render_template, jsonify
+import threading
+from flask_cors import CORS
+
 import paho.mqtt.client as mqtt
 import numpy as np
+json
+import pandas as pd  # To read the Excel file
+
+__version__ = "2.1.1.dev0"
+
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import cross_val_score
-from sklearn.metrics import mean_squared_error
-import matplotlib.pyplot as plt
-import json  # To parse JSON messages
-import pandas as pd  # To read the Excel file
-__version__ = "2.1.1.dev0"
 
 # necessary packages for decision tree
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report
+
 from sklearn.tree import plot_tree
 
 # necessary packages for gradient boosting model
-from sklearn.ensemble import GradientBoostingRegressor
+
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import roc_curve, auc
 
@@ -27,14 +48,7 @@ import numpy as np
 import datetime
 import time
 
-# neceassary packages for intergration with HTML
-from flask import Flask, request, render_template, jsonify
-import threading
-from flask_cors import CORS
 
-
-# neceasary packages for model buidling for missing values
-from sklearn.impute import KNNImputer
 
 app = Flask(__name__)
 CORS(app)
@@ -88,7 +102,6 @@ class Model_training:
 
         if pref_humidity is None:
             pref_humidity = np.nan
-
         
         # Store the data entry (temperature, humidity, and timestamp)
         self.data.append([current_time, temperature, humidity,pref_temperature ,pref_humidity])
@@ -439,8 +452,6 @@ def live_action():
 
     # Concatenate the actions into a single string
     action_message = f"Temperature Action: {temperature_action}, Humidity Action: {humidity_action}"
-    transmitted_message = f""
-
 
     # Publish the temperature_action and humidity_action to MQTT
     client2 = paho.Client()
@@ -451,11 +462,12 @@ def live_action():
     client2.publish('mds06/aitotx', action_message, qos=1)
     print(action_message)
     # Return the computed actions as a response
+    time.sleep(5)
     return jsonify({
         'temperature_action': temperature_action,
         'humidity_action': humidity_action,
     }) 
-
+    
 def on_publish(client, userdata, mid):
     print("mid: "+str(mid)) 
 
