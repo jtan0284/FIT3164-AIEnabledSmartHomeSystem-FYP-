@@ -418,12 +418,19 @@ def set_preferences():
     global temperature
     global humidity
 
-    preferred_temperature = float(request.form['temperature'])  # Get temperature input from form
-    preferred_humidity = float(request.form['humidity'])  # Get humidity input from form
-    model.set_user_preference(preferred_temperature, preferred_humidity)
-    
-    # Return a simple success message
-    return jsonify({'message': 'Preferences updated successfully'})
+    try:
+        # Parse the input values and trim spaces
+        preferred_temperature = float(request.form['temperature'].strip())
+        preferred_humidity = float(request.form['humidity'].strip())
+
+        # Validate the ranges for temperature (0-50°C) and humidity (0-100%)
+        if 0 <= preferred_temperature <= 50 and 0 <= preferred_humidity <= 100:
+            model.set_user_preference(preferred_temperature, preferred_humidity)
+            return jsonify({'success': True, 'message': 'Preferences updated successfully'})
+        else:
+            return jsonify({'success': False, 'message': 'Invalid input ranges. Temperature must be 0-50°C and Humidity must be 0-100%.'}), 400
+    except ValueError:
+        return jsonify({'success': False, 'message': 'Invalid input. Please provide valid numbers for temperature and humidity.'}), 400
 
 @app.route('/live_data')
 def live_data():
@@ -451,7 +458,7 @@ def live_action():
         humidity_action = "None"
 
     # Concatenate the actions into a single string
-    action_message = f"Temperature Action: {temperature_action}, Humidity Action: {humidity_action}"
+    action_message = f"{temperature_action}, {humidity_action}"
 
     # Publish the temperature_action and humidity_action to MQTT
     client2 = paho.Client()
@@ -497,25 +504,23 @@ def on_message(client, userdata, msg):
     try:
         # Determine if the message is for temperature or humidity based on the topic
         if "temperature" in msg.topic:
-            temperature_data = msg.payload.decode("utf-8").strip('b').strip("'")
+            temperature_data = msg.payload.decode("utf-8").strip()
             temperature = float(temperature_data)
             print(f"Received temperature: {temperature}")
 
         elif "humidity" in msg.topic:
-            humidity_data = msg.payload.decode("utf-8").strip('b').strip("'")
+            humidity_data = msg.payload.decode("utf-8").strip()
             humidity = float(humidity_data)
             print(f"Received humidity: {humidity}")
 
         # Once both temperature and humidity are available, process them
         if temperature is not None and humidity is not None:
             insert_time = datetime.datetime.now().strftime("%H:%M:%S")
-            model.preprocessing(temperature, humidity, insert_time,model.temperature_preference, model.humdity_preference)  # Pass both values to preprocessing
-            # # Reset values after processing
-            # temperature = None
-            # humidity = None
-
+            model.preprocessing(temperature, humidity, insert_time, model.temperature_preference, model.humdity_preference)
     except ValueError as e:
-        print(f"Error processing the message: {e}")
+        print(f"Error processing message: {e}")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
 
 # Function to run the MQTT client in a separate thread
 def start_mqtt():

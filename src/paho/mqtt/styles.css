@@ -337,7 +337,7 @@ button:hover {
 
 .minute-preferences-link {
     position: relative;
-    top: 400px;
+    top: 373px;
     right: 400px;
     left: 0px;
 }
@@ -420,4 +420,14 @@ button:hover {
     background-color: #f9f9f9;
     border-radius: 5px;
     border-left: 5px solid #007bff;
+}
+
+.flash {
+    animation: flash 0.5s ease-in-out;
+}
+
+@keyframes flash {
+    0% { opacity: 1; }
+    50% { opacity: 0; }
+    100% { opacity: 1; }
 }

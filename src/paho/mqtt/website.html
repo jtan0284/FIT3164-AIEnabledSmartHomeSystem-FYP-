@@ -15,7 +15,11 @@
             <!-- Middle container with the form -->
             <div class="container">
                 <h1>AI-Enabled Smart Home System</h1>
-                <form id="preferences-form" class="form-container" action="/set_preferences" method="post">
+                
+                <!-- Flash message container -->
+                <div class="flash-message" id="flash-message" style="display: none;"></div>
+                
+                <form id="preferences-form" class="form-container" method="post">
                     <label for="temperature">Enter your preferred temperature:</label>
                     <input type="number" id="temperature" name="temperature" step="0.1" placeholder="e.g., 22.5" required>
                 
@@ -90,10 +94,9 @@
     
     <div id="minute-preferences-wrapper" class="minute-preferences-wrapper">
         <div class="minute-container">
-            <a href="http://127.0.0.1:5500/mqtt/minute_preferences.html" target="_blank">>    View Minute-based Preferences</a>
+            <a href="http://127.0.0.1:5500/mqtt/minute_preferences.html" target="_blank">View Minute-based Preferences</a>
         </div>
     </div>
-    
     
     <!-- Chart.js Library -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

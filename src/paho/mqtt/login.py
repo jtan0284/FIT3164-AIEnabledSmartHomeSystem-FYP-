@@ -9,8 +9,8 @@ users = {'admin': 'password123', 'user1': 'mypassword'}
 
 @app.route('/login', methods=['POST'])
 def login():
-    username = request.form['username']
-    password = request.form['password']
+    username = request.form['username'].strip()
+    password = request.form['password'].strip()
 
     if username in users and users[username] == password:
         session['username'] = username

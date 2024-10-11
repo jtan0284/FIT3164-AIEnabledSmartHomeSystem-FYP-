@@ -68,45 +68,74 @@ document.getElementById('preferences-form').addEventListener('submit', function(
     event.preventDefault();  // Prevent the form from refreshing the page
 
     // Store the preferred temperature and humidity from the form input fields
-    preferredTemperature = parseFloat(document.getElementById('temperature').value);
-    preferredHumidity = parseFloat(document.getElementById('humidity').value);
+    var temperatureInput = document.getElementById('temperature').value.trim();  // Trim leading/trailing spaces
+    var humidityInput = document.getElementById('humidity').value.trim();  // Trim leading/trailing spaces
 
-    // Prepare form data to send
-    var formData = new FormData();
-    formData.append('temperature', preferredTemperature);
-    formData.append('humidity', preferredHumidity);
+    // Parse input values as floats for validation
+    preferredTemperature = parseFloat(temperatureInput);
+    preferredHumidity = parseFloat(humidityInput);
 
-    // Send the POST request to Flask to set the temperature and humidity
-    fetch('http://127.0.0.1:5000/set_preferences', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        var actionResult = document.getElementById('action-result');
-        actionResult.innerHTML = 
-            "Action: "+ "/n" + "Temperature: " + data.temperature_action + "/n" +"Humidity: " + data.humidity_action;
+    // Reference to the flash message element
+    var flashMessage = document.getElementById('flash-message');
 
-        // Change the style based on the temperature action
-        if (data.temperature_action === "increase temperature") {
-            actionResult.style.color = "green";
-        } else if (data.temperature_action === "decrease temperature") {
-            actionResult.style.color = "red";
-        } else {
-            actionResult.style.color = "gray";
-        }
+    // Validate the input values to ensure they are numbers
+    if (!isNaN(preferredTemperature) && !isNaN(preferredHumidity) && preferredTemperature >= 0 && preferredTemperature <= 50 && preferredHumidity >= 0 && preferredHumidity <= 100) {
+        // Prepare form data to send if inputs are valid
+        var formData = new FormData();
+        formData.append('temperature', preferredTemperature);
+        formData.append('humidity', preferredHumidity);
 
-        // Change the border color based on the humidity action
-        if (data.humidity_action === "increase humidity") {
-            actionResult.style.border = "2px solid green";
-        } else if (data.humidity_action === "decrease humidity") {
-            actionResult.style.border = "2px solid red";
-        } else {
-            actionResult.style.border = "2px solid gray";
-        }
+        // Send the POST request to Flask to set the temperature and humidity
+        fetch('http://127.0.0.1:5000/set_preferences', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.message === 'Preferences updated successfully') {
+                flashMessage.innerHTML = "Preferences encoded!";
+                flashMessage.style.color = "green";
+                flashMessage.style.display = "block";
 
-    })
-    .catch(error => console.log("Error submitting form:", error));
+                // Flash the message briefly (e.g., for 3 seconds)
+                flashMessage.classList.add('flash');
+                setTimeout(() => {
+                    flashMessage.classList.remove('flash');
+                    flashMessage.style.display = "none";
+                }, 3000);
+            } else {
+                throw new Error(data.message || 'Unexpected error');
+            }
+        })
+        .catch(error => {
+            console.log("Error submitting form:", error);
+            flashMessage.innerHTML = "Error processing your request. Please try again.";
+            flashMessage.style.color = "red";
+            flashMessage.style.display = "block";
+            flashMessage.classList.add('flash');
+            setTimeout(() => {
+                flashMessage.classList.remove('flash');
+                flashMessage.style.display = "none";
+            }, 3000);
+        });
+    } else {
+        // If the input is invalid, display an error message
+        flashMessage.innerHTML = "Invalid input! Please enter valid numbers for temperature (0-50°C) and humidity (0-100%).";
+        flashMessage.style.color = "red";
+        flashMessage.style.display = "block";
+        flashMessage.classList.add('flash');
+
+        // Flash the error message briefly (e.g., for 3 seconds)
+        setTimeout(() => {
+            flashMessage.classList.remove('flash');
+            flashMessage.style.display = "none";
+        }, 3000);
+    }
 });
 
 function fetchLiveData() {

@@ -15,8 +15,11 @@ document.getElementById('login-form').addEventListener('submit', function(event)
     fetch('http://127.0.0.1:5000/login', {
         method: 'POST',
         body: formData,
+        headers: {
+            'Accept': 'application/json',
+        },
     })
-    .then(response => response.json())  // Parse the JSON response from Flask
+    .then(response => response.json())  // Parse the JSON response
     .then(data => {
         var actionResult = document.getElementById('flash-message');
 
@@ -24,15 +27,17 @@ document.getElementById('login-form').addEventListener('submit', function(event)
         if (data.success) {
             actionResult.innerHTML = "Login successful! Redirecting...";
             actionResult.style.color = "green";
+            actionResult.style.display = "block";  // Ensure the message is displayed
 
             // Redirect to the dashboard (or any other page)
             setTimeout(() => {
                 window.location.href = "http://127.0.0.1:5500/mqtt/website.html";
-            }, 1000);  // Redirect after 1 second
+            }, 5000);  // Redirect after 1 second
         } else {
             // If login fails, display the error message
             actionResult.innerHTML = "Login failed: " + data.message;
             actionResult.style.color = "red";
+            actionResult.style.display = "block";
         }
     })
     .catch(error => {
@@ -40,5 +45,6 @@ document.getElementById('login-form').addEventListener('submit', function(event)
         var actionResult = document.getElementById('flash-message');
         actionResult.innerHTML = "Error logging in. Please try again.";
         actionResult.style.color = "red";
+        actionResult.style.display = "block";
     });
 });
